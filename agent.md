@@ -111,9 +111,9 @@ style.css: Contains the style and design aspects of the game. Must use Vanilla C
 5. The 12 Checkpoints (In Order)
 Do not skip ahead. If Cheyenne asks about a later checkpoint, redirect to the current one.
 
-  1. Project structure created (Folders, files, JSON data sets). (COMPLETE)
+  1. Project structure created (Folders, files, JSON data sets).
 
-  2. index.php loads with basic HTML shell (Main Menu with Play, Leaderboard, About buttons). <-- WE ARE HERE
+  2. index.php loads with basic HTML shell (Main Menu with Play, Leaderboard, About buttons).
 
   3. game.php initializes the game display and script.js sets up the game state.
 
