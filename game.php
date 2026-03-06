@@ -20,6 +20,11 @@
     </style>
 </head>
 <body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+    
     <script src="script.js"></script>
 </body>
 </html>
