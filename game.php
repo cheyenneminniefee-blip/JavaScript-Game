@@ -29,7 +29,19 @@
         // PHP grabs the name from index.php and prints it right here inside the quotes!
         let currentPlayerName = "<?php echo $_POST['playerName']; ?>";
     </script>
-    <script src="script.js"></script>
+    
+    <script>
+        // 1. Keep the player name we already had
+        let currentPlayerName = "<?php echo $_POST['playerName']; ?>";
+
+        // 2. Read the second JSON file using PHP, and echo it directly into a JavaScript variable!
+        <?php
+            $configFile = 'data/game_config.json';
+            $configJson = file_exists($configFile) ? file_get_contents($configFile) : '{}';
+        ?>
+        // This creates a JS object we can use anywhere in our game
+        let gameConfig = <?php echo $configJson; ?>;
+    </script>
     
     <script src="script.js"></script>
 </body>

@@ -19,6 +19,10 @@ let snowballs = []; // This empty list will hold all the snowballs we fire
 let mouse = { x: 0, y: 0 }; // Keeps track of the cursor
 
 let score = 0;
+let enemiesKilled = 0;
+let bossesKilled = 0;
+let survivalTime = 0; // We will count this in seconds
+let gameStartTime = Date.now(); // Records the exact millisecond the game started
 
 // L1-ST-enemySpawn-20260227
 let enemies = []; // This list holds all the active snowmen
@@ -178,6 +182,7 @@ function updateEnemies() {
                 if (enemies[i].health <= 0) {
                     enemies.splice(i, 1); 
                     score += 10; 
+                    enemiesKilled += 1; // Add this line!
                 }
 
                 break; // Stop checking this specific enemy against other snowballs this frame
@@ -220,14 +225,25 @@ function update() {
 }
 
 // L1-ST-scoreDisplay-20260227
-function drawScore() {
-    ctx.font = "30px Arial";
-    ctx.fillStyle = "black"; // Feel free to change this color!
-    ctx.textAlign = "center"; // This perfectly centers the text at our X coordinate
+// L1-ST-drawHUD-20260301
+function drawHUD() {
+    ctx.fillStyle = "black"; 
 
-    // canvas.width / 2 will always find the exact center (600 in your case)
-    // 50 is our Y coordinate near the top
-    ctx.fillText("Score: " + score, canvas.width / 2, 50); 
+    // --- CENTER: Score ---
+    ctx.textAlign = "center";
+    ctx.font = "30px Arial";
+    ctx.fillText("Score: " + score, canvas.width / 2, 50);
+
+    // --- LEFT SIDE: Time & Kills ---
+    // We place these below the health bar (which ends at y = 40)
+    ctx.textAlign = "left";
+    ctx.font = "20px Arial";
+    ctx.fillText("Time: " + survivalTime + "s", 20, 70); 
+    ctx.fillText("Kills: " + enemiesKilled, 20, 95);
+
+    // --- RIGHT SIDE: Bosses Defeated ---
+    ctx.textAlign = "right";
+    ctx.fillText("Bosses Defeated: " + bossesKilled, canvas.width - 20, 40);
 }
 
 // L1-ST-saveScore-20260227
@@ -274,11 +290,14 @@ function gameLoop() {
     // 2. Do all the math for movement
     update(); 
 
+    // Calculate survival time in seconds
+    survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
+
     // 3. Draw everything
     drawPlayer(); 
     updateSnowballs();
     updateEnemies();
-    drawScore();
+    drawHUD();
     drawHealthBar(); // Add your new health bar here!
 
     // 4. Repeat
