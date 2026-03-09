@@ -9,7 +9,7 @@ $newScoreData = json_decode($rawData, true);
 
 if ($newScoreData) {
     // 3. Read the existing leaderboard JSON file
-    $file = 'leaderboard.json';
+    $file = 'data/leaderboard.json';
     $currentData = file_get_contents($file);
     $leaderboard = json_decode($currentData, true);
 

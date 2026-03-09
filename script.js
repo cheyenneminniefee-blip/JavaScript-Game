@@ -92,16 +92,43 @@ function drawHealthBar() {
     ctx.fillRect(20, 20, currentHealthWidth, 20);
 }
 
+// L1-ST-advancedEnemySpawn-20260228
 function spawnEnemy() {
-    // Let's create a basic snowman object
-    // Inside your spawnEnemy function:
+    // 1. Roll our digital percentage dice
+    let roll = Math.random(); 
+
+    // 2. Set up default variables we will change based on the roll
+    let enemyRadius, enemyColor, enemySpeed, enemyHealth;
+
+    // 3. Determine the enemy type
+    if (roll < 0.60) {
+        // 60% chance: Regular Snowman
+        enemyRadius = 20;
+        enemyColor = "white";
+        enemySpeed = 2;
+        enemyHealth = 3; 
+    } else if (roll < 0.85) {
+        // 25% chance: Runner (Smaller, faster, fragile!)
+        enemyRadius = 15;
+        enemyColor = "cyan"; // Giving them a distinct color
+        enemySpeed = 4.5;    // Very fast!
+        enemyHealth = 1;     // Dies in one hit
+    } else {
+        // 15% chance: Tank (Huge, slow, lots of health!)
+        enemyRadius = 35;
+        enemyColor = "gray"; 
+        enemySpeed = 0.8;    // Very slow
+        enemyHealth = 10;    // Takes 10 snowballs to destroy
+    }
+
+    // 4. Create the final object using those variables
     let snowman = {
         x: Math.random() * canvas.width,
-        y: -30,
-        radius: 20,
-        color: "white",
-        speed: 2,
-        health: 3 // Changed from 10 to 3 for three hits
+        y: -40, // Start a little higher so the big tanks don't pop into view awkwardly
+        radius: enemyRadius,
+        color: enemyColor,
+        speed: enemySpeed,
+        health: enemyHealth
     };
 
     enemies.push(snowman);
@@ -124,7 +151,7 @@ function updateEnemies() {
         // 2. Draw the enemy
         ctx.beginPath();
         ctx.arc(enemies[i].x, enemies[i].y, enemies[i].radius, 0, Math.PI * 2);
-        ctx.fillStyle = "red"; 
+        ctx.fillStyle = enemies[i].color;
         ctx.fill();
         ctx.closePath();
 
