@@ -203,6 +203,28 @@ function drawScore() {
     ctx.fillText("Score: " + score, canvas.width / 2, 50); 
 }
 
+// L1-ST-saveScore-20260227
+function saveGameData(playerName, finalScore) {
+    // 1. Pack the data into a neat JavaScript object
+    let dataToSend = {
+        name: playerName,
+        score: finalScore
+    };
+
+    // 2. Hand it to the mail carrier (fetch)
+    fetch('save_score.php', {
+        method: 'POST', // We are "posting" mail to the server
+        headers: {
+            'Content-Type': 'application/json' // Telling PHP what kind of package this is
+        },
+        body: JSON.stringify(dataToSend) // The actual package
+    })
+    .then(response => response.text())
+    .then(result => {
+        console.log("The server says: ", result);
+    });
+}
+
 // This creates a loop that runs about 60 times per second
 // L2-ST-gameOver-20260227
 function gameLoop() {
@@ -215,6 +237,7 @@ function gameLoop() {
 
         ctx.font = "30px Arial";
         ctx.fillText("Final Score: " + score, canvas.width / 2, canvas.height / 2 + 50);
+        saveGameData(currentPlayerName, score);
         return; // This completely stops the loop! No more movement or drawing.
     }
 

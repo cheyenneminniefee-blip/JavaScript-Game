@@ -24,6 +24,12 @@
     <div id="game-container">
         <canvas id="gameCanvas" width="1500" height="1000"></canvas>
     </div>
+
+    <script>
+        // PHP grabs the name from index.php and prints it right here inside the quotes!
+        let currentPlayerName = "<?php echo $_POST['playerName']; ?>";
+    </script>
+    <script src="script.js"></script>
     
     <script src="script.js"></script>
 </body>
