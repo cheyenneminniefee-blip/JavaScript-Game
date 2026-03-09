@@ -76,15 +76,32 @@ function drawPlayer() {
     ctx.closePath();
 }
 
+// L2-ST-healthBar-20260227
+function drawHealthBar() {
+    // 1. Draw a red background rectangle to represent missing health
+    ctx.fillStyle = "red";
+    ctx.fillRect(20, 20, 100, 20); // x: 20, y: 20, width: 100, height: 20
+
+    // 2. Draw a green rectangle on top to represent current health
+    ctx.fillStyle = "green";
+
+    // We use Math.max to ensure the width never drops below 0 if you take extra damage
+    let currentHealthWidth = Math.max(0, player.health); 
+
+    // Because your max health is 100, it perfectly matches the 100 pixel width!
+    ctx.fillRect(20, 20, currentHealthWidth, 20);
+}
+
 function spawnEnemy() {
     // Let's create a basic snowman object
+    // Inside your spawnEnemy function:
     let snowman = {
-        x: Math.random() * canvas.width, // Picks a random spot along the width
-        y: -30, // Starts slightly above the screen so it drops in
-        radius: 20, // Slightly larger than the player
+        x: Math.random() * canvas.width,
+        y: -30,
+        radius: 20,
         color: "white",
         speed: 2,
-        health: 10
+        health: 3 // Changed from 10 to 3 for three hits
     };
 
     enemies.push(snowman);
@@ -92,8 +109,8 @@ function spawnEnemy() {
 
 // L1-ST-enemyMovement-20260227
 // L2-ST-collisionDetection-20260227
+// L3-ST-enemyHealth-20260227
 function updateEnemies() {
-    // We loop backwards because we might be removing enemies from the list!
     for (let i = enemies.length - 1; i >= 0; i--) {
 
         // 1. Move the enemy toward the player
@@ -111,25 +128,32 @@ function updateEnemies() {
         ctx.fill();
         ctx.closePath();
 
-        // 3. Check for collisions with ANY snowball on the screen
+        // 3. Player Collision (The logic you explained!)
+        let distToPlayer = Math.hypot(dx, dy); // We can reuse dx and dy from movement!
+        if (distToPlayer < enemies[i].radius + player.radius) {
+            player.health -= 10; // Player takes 10 damage
+            enemies.splice(i, 1); // Enemy explodes on the player
+            continue; // Skip the rest of the loop for this enemy since it's dead
+        }
+
+        // 4. Snowball Collision (Now with Enemy Health!)
         for (let j = snowballs.length - 1; j >= 0; j--) {
-            // Find the distance between this specific enemy and this specific snowball
             let distX = enemies[i].x - snowballs[j].x;
             let distY = enemies[i].y - snowballs[j].y;
             let distance = Math.hypot(distX, distY); 
 
-            // If the distance is less than their combined radii, it's a hit!
             if (distance < enemies[i].radius + snowballs[j].radius) {
 
-                // Remove the snowball
-                snowballs.splice(j, 1);
-                // Remove the enemy
-                enemies.splice(i, 1);
-                // Increase the score!
-                score += 10;
+                snowballs.splice(j, 1); // Snowball is always destroyed on impact
+                enemies[i].health -= 1; // Enemy loses 1 health
 
-                // Break out of the snowball loop so we don't try to check a dead enemy
-                break; 
+                // Only destroy the enemy and give score IF health is 0
+                if (enemies[i].health <= 0) {
+                    enemies.splice(i, 1); 
+                    score += 10; 
+                }
+
+                break; // Stop checking this specific enemy against other snowballs this frame
             }
         }
     }
@@ -180,12 +204,34 @@ function drawScore() {
 }
 
 // This creates a loop that runs about 60 times per second
+// L2-ST-gameOver-20260227
 function gameLoop() {
-    update(); // Check for movement first
-    drawPlayer(); // Then draw the results
-    drawScore();
+    // Check for Game Over FIRST!
+    if (player.health <= 0) {
+        ctx.fillStyle = "black";
+        ctx.font = "60px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+
+        ctx.font = "30px Arial";
+        ctx.fillText("Final Score: " + score, canvas.width / 2, canvas.height / 2 + 50);
+        return; // This completely stops the loop! No more movement or drawing.
+    }
+
+    // 1. Clear the canvas first so we don't leave trails!
+    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+    // 2. Do all the math for movement
+    update(); 
+
+    // 3. Draw everything
+    drawPlayer(); 
     updateSnowballs();
     updateEnemies();
+    drawScore();
+    drawHealthBar(); // Add your new health bar here!
+
+    // 4. Repeat
     requestAnimationFrame(gameLoop);
 }
 
