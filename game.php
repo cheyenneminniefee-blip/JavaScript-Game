@@ -22,7 +22,7 @@
 <body>
 
     <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <canvas id="gameCanvas" width="1500" height="1000"></canvas>
     </div>
     
     <script src="script.js"></script>
