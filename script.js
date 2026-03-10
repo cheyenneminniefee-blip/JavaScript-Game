@@ -19,6 +19,10 @@ let snowballs = []; // This empty list will hold all the snowballs we fire
 let mouse = { x: 0, y: 0 }; // Keeps track of the cursor
 let lastPlayerShot = 0;
 
+let boostActive = false;
+let boostStartTime = 0;
+let boostKillCount = 0; // Tracks the 30 normal kills specifically for the boost
+
 let score = 0;
 let enemiesKilled = 0;
 let bossesKilled = 0;
@@ -45,10 +49,12 @@ canvas.addEventListener("mousemove", function(e) {
 // 2. Listen for a mouse click to pull the trigger
 canvas.addEventListener("mousedown", function(e) {
     // --- NEW: Cooldown Check ---
-      // If 300 milliseconds haven't passed since the last shot, ignore the click!
-      if (Date.now() - lastPlayerShot < 300) return; 
+    // --- UPDATED: Dynamic Cooldown Check ---
+      // 50ms is crazy fast (rapid fire!), 300ms is normal
+      let currentCooldown = boostActive ? 50 : 300; 
 
-      // Update the timer to the current exact millisecond
+      if (Date.now() - lastPlayerShot < currentCooldown) return; 
+
       lastPlayerShot = Date.now();
     // 1. Find the distance between the player and the mouse click
     let dx = mouse.x - player.x;
@@ -143,18 +149,37 @@ function spawnEnemy() {
         enemyPoints = 30;   // 30 points for the big guys!
     }
 
-    let snowman = {
-        x: Math.random() * canvas.width,
-        y: -40, 
-        radius: enemyRadius,
-        color: enemyColor,
-        speed: enemySpeed,
-        health: enemyHealth,
-        points: enemyPoints // Attach the points to the object!
-    };
+    // --- NEW: Pick a random side to spawn from ---
+        let spawnX, spawnY;
+        let edge = Math.floor(Math.random() * 4); // 0: Top, 1: Right, 2: Bottom, 3: Left
 
-    enemies.push(snowman);
-}
+        if (edge === 0) { // Top
+            spawnX = Math.random() * canvas.width;
+            spawnY = -40;
+        } else if (edge === 1) { // Right
+            spawnX = canvas.width + 40;
+            spawnY = Math.random() * canvas.height;
+        } else if (edge === 2) { // Bottom
+            spawnX = Math.random() * canvas.width;
+            spawnY = canvas.height + 40;
+        } else { // Left
+            spawnX = -40;
+            spawnY = Math.random() * canvas.height;
+        }
+
+        let snowman = {
+            x: spawnX, // Use the new randomized X
+            y: spawnY, // Use the new randomized Y
+            radius: enemyRadius,
+            color: enemyColor,
+            speed: enemySpeed,
+            health: enemyHealth,
+            points: enemyPoints,
+            isBoss: false // Make sure normal enemies are explicitly NOT bosses
+        };
+
+        enemies.push(snowman);
+    }
 
 // L1-ST-bossSpawner-20260301
 function spawnBoss() {
@@ -245,18 +270,27 @@ function updateEnemies() {
                     score += enemies[i].points; 
                     enemiesKilled += 1; 
 
-                    // --- NEW: If this was the boss, reset the switch! ---
                     if (enemies[i].isBoss) {
                         bossesKilled += 1;
-                        bossActive = false; // This instantly allows normal enemies to spawn again
-
+                        bossActive = false; 
                         nextBossScore = score + 150;
+                    } else {
+                        // --- NEW: Boost Kill Tracker (Only counts normal enemies!) ---
+                        if (!boostActive) {
+                            boostKillCount += 1;
+                            if (boostKillCount >= 30) {
+                                boostActive = true;
+                                boostStartTime = Date.now(); // Start the 15-second clock!
+                                boostKillCount = 0; // Reset for the next time
+                            }
+                        }
                     }
 
                     enemies.splice(i, 1); 
+                    break; // Stop checking this specific enemy against other snowballs this frame
                 }
 
-                break; // Stop checking this specific enemy against other snowballs this frame
+
             }
         }
     }
@@ -325,6 +359,10 @@ function update() {
     if (keys["s"] || keys["ArrowDown"]) player.y += speed;
     if (keys["a"] || keys["ArrowLeft"]) player.x -= speed;
     if (keys["d"] || keys["ArrowRight"]) player.x += speed;
+// --- NEW: Keep player inside canvas bounds ---
+    // Math.max and Math.min force the player's coordinates to stay within the canvas dimensions
+    player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+    player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
 }
 
 // L1-ST-scoreDisplay-20260227
@@ -409,6 +447,12 @@ function gameLoop() {
     if (Date.now() - lastSpawnTime > currentSpawnDelay) {
         spawnEnemy();
         lastSpawnTime = Date.now(); // Reset the timer
+    }
+
+    // --- NEW: Boost Timer Check ---
+    // If boost is active AND 15,000 milliseconds (15s) have passed...
+    if (boostActive && Date.now() - boostStartTime > 15000) {
+        boostActive = false; // Turn the boost off!
     }
 
     // --- NEW BOSS CHECK ---
