@@ -29,6 +29,11 @@ let enemies = []; // This list holds all the active snowmen
 // L1-ST-enemyTimer-20260227
 setInterval(spawnEnemy, 2000); // This rings the "alarm" every 2000 milliseconds (2 seconds)
 
+let bossActive = false; // Acts as an on/off switch for the boss state
+let enemySnowballs = []; // A separate list just for the boss's projectiles
+
+let nextBossScore = 150;
+
 // 1. Update the mouse position whenever it moves over the canvas
 canvas.addEventListener("mousemove", function(e) {
     mouse.x = e.offsetX; // offsetX/Y gets the coordinates relative to the canvas
@@ -97,45 +102,69 @@ function drawHealthBar() {
 }
 
 // L1-ST-advancedEnemySpawn-20260228
+// L1-ST-enemyPointsSetup-20260301
 function spawnEnemy() {
-    // 1. Roll our digital percentage dice
+    // Stop spawning if the boss is here! (We will use this in the next step)
+    if (typeof bossActive !== 'undefined' && bossActive) return;
+
     let roll = Math.random(); 
 
-    // 2. Set up default variables we will change based on the roll
-    let enemyRadius, enemyColor, enemySpeed, enemyHealth;
+    // Add enemyPoints to our setup list
+    let enemyRadius, enemyColor, enemySpeed, enemyHealth, enemyPoints; 
 
-    // 3. Determine the enemy type
     if (roll < 0.60) {
-        // 60% chance: Regular Snowman
+        // Regular Snowman
         enemyRadius = 20;
         enemyColor = "white";
         enemySpeed = 2;
         enemyHealth = 3; 
+        enemyPoints = 10;   // 10 points
     } else if (roll < 0.85) {
-        // 25% chance: Runner (Smaller, faster, fragile!)
+        // Runner
         enemyRadius = 15;
-        enemyColor = "cyan"; // Giving them a distinct color
-        enemySpeed = 4.5;    // Very fast!
-        enemyHealth = 1;     // Dies in one hit
+        enemyColor = "cyan"; 
+        enemySpeed = 4.5;    
+        enemyHealth = 1;     
+        enemyPoints = 15;   // 15 points
     } else {
-        // 15% chance: Tank (Huge, slow, lots of health!)
+        // Tank
         enemyRadius = 35;
         enemyColor = "gray"; 
-        enemySpeed = 0.8;    // Very slow
-        enemyHealth = 10;    // Takes 10 snowballs to destroy
+        enemySpeed = 0.8;    
+        enemyHealth = 10;    
+        enemyPoints = 30;   // 30 points for the big guys!
     }
 
-    // 4. Create the final object using those variables
     let snowman = {
         x: Math.random() * canvas.width,
-        y: -40, // Start a little higher so the big tanks don't pop into view awkwardly
+        y: -40, 
         radius: enemyRadius,
         color: enemyColor,
         speed: enemySpeed,
-        health: enemyHealth
+        health: enemyHealth,
+        points: enemyPoints // Attach the points to the object!
     };
 
     enemies.push(snowman);
+}
+
+// L1-ST-bossSpawner-20260301
+function spawnBoss() {
+    bossActive = true; // Turn on the boss state!
+
+    let boss = {
+        x: canvas.width / 2,
+        y: -100, // Starts off-screen
+        radius: 60, // MASSIVE
+        color: "purple", // Give the boss a scary, unique color
+        speed: 1, // Slow, menacing pace
+        health: 50 + (bossesKilled * 10),
+        points: 200, // Huge score payout
+        isBoss: true, // A special flag so our code knows this is the boss
+        lastShot: Date.now() // Tracks when it last fired a snowball
+    };
+
+    enemies.push(boss);
 }
 
 // L1-ST-enemyMovement-20260227
@@ -152,6 +181,26 @@ function updateEnemies() {
         enemies[i].x += Math.cos(angle) * enemies[i].speed;
         enemies[i].y += Math.sin(angle) * enemies[i].speed;
 
+        // --- NEW: BOSS SHOOTING LOGIC ---
+        if (enemies[i].isBoss) {
+            // Check if 2000 milliseconds (2 seconds) have passed since the last shot
+            if (Date.now() - enemies[i].lastShot > 2000) {
+                let bossProjectileSpeed = 6;
+
+                // Add a giant purple snowball to our new list!
+                enemySnowballs.push({
+                    x: enemies[i].x,
+                    y: enemies[i].y,
+                    radius: 10, // Bigger than player snowballs
+                    color: "purple",
+                    velocityX: Math.cos(angle) * bossProjectileSpeed,
+                    velocityY: Math.sin(angle) * bossProjectileSpeed
+                });
+
+                enemies[i].lastShot = Date.now(); // Reset the boss's firing timer
+            }
+        }
+
         // 2. Draw the enemy
         ctx.beginPath();
         ctx.arc(enemies[i].x, enemies[i].y, enemies[i].radius, 0, Math.PI * 2);
@@ -162,7 +211,12 @@ function updateEnemies() {
         // 3. Player Collision (The logic you explained!)
         let distToPlayer = Math.hypot(dx, dy); // We can reuse dx and dy from movement!
         if (distToPlayer < enemies[i].radius + player.radius) {
-            player.health -= 10; // Player takes 10 damage
+            // --- NEW: Check if it's the boss! ---
+            if (enemies[i].isBoss) {
+                player.health = 0; // Instant death!
+            } else {
+                player.health -= 10; // Normal enemies only do 10 damage
+            }
             enemies.splice(i, 1); // Enemy explodes on the player
             continue; // Skip the rest of the loop for this enemy since it's dead
         }
@@ -178,11 +232,20 @@ function updateEnemies() {
                 snowballs.splice(j, 1); // Snowball is always destroyed on impact
                 enemies[i].health -= 1; // Enemy loses 1 health
 
-                // Only destroy the enemy and give score IF health is 0
+                // L1-ST-bossDeath-20260301
                 if (enemies[i].health <= 0) {
+                    score += enemies[i].points; 
+                    enemiesKilled += 1; 
+
+                    // --- NEW: If this was the boss, reset the switch! ---
+                    if (enemies[i].isBoss) {
+                        bossesKilled += 1;
+                        bossActive = false; // This instantly allows normal enemies to spawn again
+
+                        nextBossScore = score + 150;
+                    }
+
                     enemies.splice(i, 1); 
-                    score += 10; 
-                    enemiesKilled += 1; // Add this line!
                 }
 
                 break; // Stop checking this specific enemy against other snowballs this frame
@@ -211,6 +274,38 @@ function updateSnowballs() {
 
             // Remove 1 item at index i
             snowballs.splice(i, 1);
+        }
+    }
+}
+
+// L1-ST-enemySnowballLogic-20260301
+function updateEnemySnowballs() {
+    for (let i = enemySnowballs.length - 1; i >= 0; i--) {
+        enemySnowballs[i].x += enemySnowballs[i].velocityX;
+        enemySnowballs[i].y += enemySnowballs[i].velocityY;
+
+        // Draw the boss snowball
+        ctx.beginPath();
+        ctx.arc(enemySnowballs[i].x, enemySnowballs[i].y, enemySnowballs[i].radius, 0, Math.PI * 2);
+        ctx.fillStyle = enemySnowballs[i].color;
+        ctx.fill();
+        ctx.closePath();
+
+        // Check if it hits the player
+        let dx = player.x - enemySnowballs[i].x;
+        let dy = player.y - enemySnowballs[i].y;
+        let distance = Math.hypot(dx, dy);
+
+        if (distance < player.radius + enemySnowballs[i].radius) {
+            player.health -= 15; // Boss snowballs do heavy damage!
+            enemySnowballs.splice(i, 1);
+            continue;
+        }
+
+        // Clean up if it goes off-screen
+        if (enemySnowballs[i].x < 0 || enemySnowballs[i].x > canvas.width || 
+            enemySnowballs[i].y < 0 || enemySnowballs[i].y > canvas.height) {
+            enemySnowballs.splice(i, 1);
         }
     }
 }
@@ -293,9 +388,16 @@ function gameLoop() {
     // Calculate survival time in seconds
     survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
 
+    // --- NEW BOSS CHECK ---
+    // If the boss isn't already active AND our score is high enough...
+    if (!bossActive && score >= nextBossScore) {
+        spawnBoss();
+    }
+
     // 3. Draw everything
-    drawPlayer(); 
+    drawPlayer();
     updateSnowballs();
+    updateEnemySnowballs();
     updateEnemies();
     drawHUD();
     drawHealthBar(); // Add your new health bar here!

@@ -31,18 +31,20 @@
     </script>
     
     <script>
-        // 1. Keep the player name we already had
+        // 1. We only declare the name ONCE using 'let'
         let currentPlayerName = "<?php echo $_POST['playerName']; ?>";
 
-        // 2. Read the second JSON file using PHP, and echo it directly into a JavaScript variable!
+        // 2. Read the game configuration JSON file
         <?php
             $configFile = 'data/game_config.json';
-            $configJson = file_exists($configFile) ? file_get_contents($configFile) : '{}';
+            // This check makes sure the file exists so the game doesn't crash if it's missing
+            $configJson = file_exists($configFile) ? file_get_contents($configFile) : '{"bossSpawnScore": 500}';
         ?>
-        // This creates a JS object we can use anywhere in our game
+
+        // 3. Create the JS object from our PHP data
         let gameConfig = <?php echo $configJson; ?>;
     </script>
-    
+
     <script src="script.js"></script>
 </body>
 </html>
