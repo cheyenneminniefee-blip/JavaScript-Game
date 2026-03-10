@@ -17,6 +17,7 @@ let keys = {};
 // L1-ST-mouseTracking-20260226
 let snowballs = []; // This empty list will hold all the snowballs we fire
 let mouse = { x: 0, y: 0 }; // Keeps track of the cursor
+let lastPlayerShot = 0;
 
 let score = 0;
 let enemiesKilled = 0;
@@ -27,7 +28,8 @@ let gameStartTime = Date.now(); // Records the exact millisecond the game starte
 // L1-ST-enemySpawn-20260227
 let enemies = []; // This list holds all the active snowmen
 // L1-ST-enemyTimer-20260227
-setInterval(spawnEnemy, 2000); // This rings the "alarm" every 2000 milliseconds (2 seconds)
+let lastSpawnTime = Date.now();
+let currentSpawnDelay = 2000; // Starts at 2 seconds
 
 let bossActive = false; // Acts as an on/off switch for the boss state
 let enemySnowballs = []; // A separate list just for the boss's projectiles
@@ -42,6 +44,12 @@ canvas.addEventListener("mousemove", function(e) {
 
 // 2. Listen for a mouse click to pull the trigger
 canvas.addEventListener("mousedown", function(e) {
+    // --- NEW: Cooldown Check ---
+      // If 300 milliseconds haven't passed since the last shot, ignore the click!
+      if (Date.now() - lastPlayerShot < 300) return; 
+
+      // Update the timer to the current exact millisecond
+      lastPlayerShot = Date.now();
     // 1. Find the distance between the player and the mouse click
     let dx = mouse.x - player.x;
     let dy = mouse.y - player.y;
@@ -391,6 +399,17 @@ function gameLoop() {
 
     // Calculate survival time in seconds
     survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
+
+    // --- NEW: ESCALATING SPAWN RATE ---
+    // The delay drops by 20 milliseconds for every second you survive.
+    // Math.max ensures the delay never drops below 500ms (half a second) so it remains playable!
+    currentSpawnDelay = Math.max(500, 2000 - (survivalTime * 20));
+
+    // Check if it is time to spawn a new enemy
+    if (Date.now() - lastSpawnTime > currentSpawnDelay) {
+        spawnEnemy();
+        lastSpawnTime = Date.now(); // Reset the timer
+    }
 
     // --- NEW BOSS CHECK ---
     // If the boss isn't already active AND our score is high enough...
