@@ -46,19 +46,38 @@
 
             // 3. Start drawing the HTML table
             echo "<table>";
-            echo "<tr><th>Rank</th><th>Player Name</th><th>Score</th></tr>";
+            // L1-ST-tableHeaders-20260301
+            echo "<tr>";
+            echo "<th>Rank</th>";
+            echo "<th>Player Name</th>";
+            echo "<th>Score</th>";
+            echo "<th>Kills</th>";
+            echo "<th>Bosses Defeated</th>";
+            echo "<th>Time Survived</th>";
+            echo "<th>Date Played</th>";
+            echo "</tr>";
 
             // 4. Loop through the sorted data and make a row for each entry
             $rank = 1;
             foreach ($leaderboard as $entry) {
                 // htmlspecialchars protects our site from people typing code into their names!
+                // L1-ST-leaderboardTable-20260301
                 $name = htmlspecialchars($entry['name']);
                 $score = htmlspecialchars($entry['score']);
+                $kills = htmlspecialchars($entry['totalKills']); 
+                $bosses = htmlspecialchars($entry['bossesKilled']); 
+                $survived = htmlspecialchars($entry['survivedTime']); 
 
+                // Convert the JavaScript timestamp into a readable date!
+                // L1-ST-timestampFix-20260301
+                $rawSeconds = $entry['dateTime'] / 1000;
+                $cleanSeconds = round($rawSeconds); // Converts the float to an integer
+                $playedAt = date("m/d/Y H:i", $cleanSeconds);
+
+                // L1-ST-tableHeaders-20260301
                 echo "<tr>";
-                echo "<td>{$rank}</td>";
-                echo "<td>{$name}</td>";
-                echo "<td>{$score}</td>";
+                echo "<td>{$rank}</td><td>{$name}</td><td>{$score}</td>";
+                echo "<td>{$kills}</td><td>{$bosses}</td><td>{$survived}s</td><td>{$playedAt}</td>";
                 echo "</tr>";
 
                 $rank++; // Increase the rank number by 1 for the next loop

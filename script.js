@@ -346,7 +346,11 @@ function saveGameData(playerName, finalScore) {
     // 1. Pack the data into a neat JavaScript object
     let dataToSend = {
         name: playerName,
-        score: finalScore
+        score: finalScore,
+        totalKills: enemiesKilled,
+        bossesKilled: bossesKilled,
+        survivedTime: survivalTime,
+        dateTime: Date.now() // Grabs the exact millisecond the game ended
     };
 
     // 2. Hand it to the mail carrier (fetch)

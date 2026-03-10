@@ -1,6 +1,10 @@
 [
     {
         "name": "Cheyenne",
-        "score": 0
+        "score": 160,
+        "totalKills": 9,
+        "bossesKilled": 0,
+        "survivedTime": 25,
+        "dateTime": 1773165793010
     }
 ]
