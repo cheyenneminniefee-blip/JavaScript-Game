@@ -18,6 +18,8 @@ let keys = {};
 let snowballs = []; // This empty list will hold all the snowballs we fire
 let mouse = { x: 0, y: 0 }; // Keeps track of the cursor
 let lastPlayerShot = 0;
+// L1-ST-particleSystem-20260304
+let particles = [];
 
 let boostActive = false;
 let boostStartTime = 0;
@@ -262,35 +264,40 @@ function updateEnemies() {
 
             if (distance < enemies[i].radius + snowballs[j].radius) {
 
+                // --- NEW: Small white poof when the snowball hits! ---
+                // L1-ST-hitEffect-20260304
+                createExplosion(snowballs[j].x, snowballs[j].y, "white", 5);
+
                 snowballs.splice(j, 1); // Snowball is always destroyed on impact
                 enemies[i].health -= 1; // Enemy loses 1 health
 
-                // L1-ST-bossDeath-20260301
                 if (enemies[i].health <= 0) {
                     score += enemies[i].points; 
                     enemiesKilled += 1; 
 
+                    // --- NEW: Massive explosion matching the enemy color! ---
+                    // L1-ST-deathEffect-20260304
+                    createExplosion(enemies[i].x, enemies[i].y, enemies[i].color, 25);
+
                     if (enemies[i].isBoss) {
                         bossesKilled += 1;
                         bossActive = false; 
-                        nextBossScore = score + 150;
+                        nextBossScore = score + gameConfig.bossSpawnScore;
                     } else {
-                        // --- NEW: Boost Kill Tracker (Only counts normal enemies!) ---
+                        // Boost Kill Tracker...
                         if (!boostActive) {
                             boostKillCount += 1;
                             if (boostKillCount >= 30) {
                                 boostActive = true;
-                                boostStartTime = Date.now(); // Start the 15-second clock!
-                                boostKillCount = 0; // Reset for the next time
+                                boostStartTime = Date.now(); 
+                                boostKillCount = 0; 
                             }
                         }
                     }
 
                     enemies.splice(i, 1); 
-                    break; // Stop checking this specific enemy against other snowballs this frame
-                }
-
-
+                    break; 
+                } 
             }
         }
     }
@@ -317,6 +324,32 @@ function updateSnowballs() {
             // Remove 1 item at index i
             snowballs.splice(i, 1);
         }
+    }
+}
+
+// L1-ST-updateParticles-20260304
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.velocityX;
+        p.y += p.velocityY;
+        p.alpha -= 0.05; // Fade out by 5% every frame
+
+        // If the particle is fully transparent, remove it from the list
+        if (p.alpha <= 0) {
+            particles.splice(i, 1);
+            continue;
+        }
+
+        // Draw the particle
+        ctx.save(); // Save the canvas state
+        ctx.globalAlpha = p.alpha; // Apply the fading effect
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.closePath();
+        ctx.restore(); // Restore the canvas state so we don't accidentally fade everything else!
     }
 }
 
@@ -413,6 +446,22 @@ function saveGameData(playerName, finalScore) {
     });
 }
 
+// L1-ST-createExplosion-20260304
+function createExplosion(x, y, color, particleCount) {
+    for (let i = 0; i < particleCount; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            // Math.random() - 0.5 gives us random directions (both negative and positive)
+            velocityX: (Math.random() - 0.5) * 10,
+            velocityY: (Math.random() - 0.5) * 10,
+            radius: Math.random() * 3 + 1, // Random size between 1 and 4
+            color: color,
+            alpha: 1 // Start fully opaque
+        });
+    }
+}
+
 // This creates a loop that runs about 60 times per second
 // L2-ST-gameOver-20260227
 function gameLoop() {
@@ -462,12 +511,13 @@ function gameLoop() {
     }
 
     // 3. Draw everything
-    drawPlayer();
+    drawPlayer(); 
     updateSnowballs();
-    updateEnemySnowballs();
+    updateEnemySnowballs(); 
     updateEnemies();
+    updateParticles();
     drawHUD();
-    drawHealthBar(); // Add your new health bar here!
+    drawHealthBar();
 
     // 4. Repeat
     requestAnimationFrame(gameLoop);
