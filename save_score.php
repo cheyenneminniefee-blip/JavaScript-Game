@@ -1,4 +1,15 @@
 <?php
+
+require_once 'functions.php';
+
+$pdo = getDBConnection();
+
+// Get the raw JSON from JavaScript
+$rawData = file_get_contents("php://input");
+$gameData = json_decode($rawData, true);
+
+// Clean the name before saving!
+$safeName = sanitizePlayerName($gameData['name']);
 // L2-ST-savePHP-20260227
 
 // 1. Get the raw string data that JavaScript sent via fetch
