@@ -2,6 +2,10 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+// Grab the name we saved on the home screen!
+// If they somehow bypassed the home screen, default to 'Anonymous'
+let currentPlayerName = localStorage.getItem('currentPlayerName') || 'Anonymous';
+
 // Let's define our player object right in the middle of the canvas
 let player = {
     x: canvas.width / 2,
@@ -25,7 +29,7 @@ let boostActive = false;
 let boostStartTime = 0;
 let boostKillCount = 0; // Tracks the 30 normal kills specifically for the boost
 
-let score = 0;
+let score = 150;
 let enemiesKilled = 0;
 let bossesKilled = 0;
 let survivalTime = 0; // We will count this in seconds
@@ -147,6 +151,37 @@ function drawHealthBar() {
     ctx.fillRect(barX, barY, currentHealthWidth, barHeight);
 }
 
+function drawBossHealthBar(boss) {
+    // We only want to draw the bar if the boss is actually alive
+    if (boss.health <= 0) return;
+
+    // Set the size of the health bar
+    let barWidth = 60; 
+    let barHeight = 8;
+
+    // Position it directly above the boss
+    // Note: If you use boss.width/boss.height for your sprites instead of boss.radius, 
+    // you might need to change 'boss.radius' to '(boss.height / 2)'
+    let barX = boss.x - (barWidth / 2);
+    let barY = boss.y - boss.radius - 20; 
+
+    // 1. Draw the thick black border
+    ctx.fillStyle = "black";
+    ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+
+    // 2. Draw the dark red background (missing health)
+    ctx.fillStyle = "#aa0000"; 
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+
+    // 3. Draw the current health (Purple to match the boss!)
+    // We use a percentage calculation so the bar shrinks smoothly
+    let healthPercent = Math.max(0, boss.health / boss.maxHealth);
+    let currentHealthWidth = barWidth * healthPercent;
+
+    ctx.fillStyle = "#9b59b6"; // A cool, visible purple
+    ctx.fillRect(barX, barY, currentHealthWidth, barHeight);
+}
+
 // L1-ST-advancedEnemySpawn-20260228
 // L1-ST-enemyPointsSetup-20260301
 function spawnEnemy() {
@@ -224,9 +259,11 @@ function spawnBoss() {
         color: "purple", // Give the boss a scary, unique color
         speed: 1, // Slow, menacing pace
         health: 50 + (bossesKilled * 10),
+        maxHealth: 50 + (bossesKilled * 10),
         points: 200, // Huge score payout
         isBoss: true, // A special flag so our code knows this is the boss
-        lastShot: Date.now() // Tracks when it last fired a snowball
+        lastShot: Date.now(), // Tracks when it last fired a snowball
+        shotsFired: 0 // --- NEW: Keep track of how many snowballs it has thrown! ---
     };
 
     enemies.push(boss);
@@ -248,21 +285,77 @@ function updateEnemies() {
 
         // --- NEW: BOSS SHOOTING LOGIC ---
         if (enemies[i].isBoss) {
-            // Check if 2000 milliseconds (2 seconds) have passed since the last shot
-            if (Date.now() - enemies[i].lastShot > 2000) {
+
+            // --- UPDATED: Dynamic Boss Cooldown ---
+            let bossCooldown = 1500; // Normal attack speed (2 seconds)
+
+            // If the boss has fired 10 or more times, enter BARRAGE MODE! (200ms delay)
+            if (enemies[i].shotsFired >= 10) {
+                bossCooldown = 200; 
+            }
+
+            // Check if enough time has passed based on our dynamic cooldown
+            if (Date.now() - enemies[i].lastShot > bossCooldown) {
                 let bossProjectileSpeed = 6;
 
-                // Add a giant purple snowball to our new list!
-                enemySnowballs.push({
-                    x: enemies[i].x,
-                    y: enemies[i].y,
-                    radius: 10, // Bigger than player snowballs
-                    color: "purple",
-                    velocityX: Math.cos(angle) * bossProjectileSpeed,
-                    velocityY: Math.sin(angle) * bossProjectileSpeed
-                });
+                // --- NEW: SHOTGUN & BURST LOGIC ---
+                // Only allow special attacks during the "normal" phase (shots 0-9)
+                let isSpecialAttackPhase = (enemies[i].shotsFired < 10);
+
+                // Roll a random decimal between 0 and 1 to decide the attack
+                let attackRoll = Math.random();
+
+                if (isSpecialAttackPhase && attackRoll < 0.15) {
+                    // --- 15% CHANCE: MASSIVE 360 BURST ---
+                    // Loop from -10 to 10 (21 total snowballs)
+                    for (let spread = -10; spread <= 10; spread++) {
+                        // Math.PI * 2 is a full circle in radians. 
+                        // Dividing it by 21 spaces the snowballs out perfectly!
+                        let spreadAngle = angle + (spread * ((Math.PI * 2) / 21)); 
+
+                        enemySnowballs.push({
+                            x: enemies[i].x,
+                            y: enemies[i].y,
+                            radius: 10,
+                            color: "purple",
+                            velocityX: Math.cos(spreadAngle) * bossProjectileSpeed,
+                            velocityY: Math.sin(spreadAngle) * bossProjectileSpeed
+                        });
+                    }
+                } else if (isSpecialAttackPhase && attackRoll < 0.45) {
+                    // --- 30% CHANCE: NORMAL SHOTGUN ---
+                    for (let spread = -2; spread <= 2; spread++) {
+                        let spreadAngle = angle + (spread * 0.2); 
+
+                        enemySnowballs.push({
+                            x: enemies[i].x,
+                            y: enemies[i].y,
+                            radius: 10,
+                            color: "purple",
+                            velocityX: Math.cos(spreadAngle) * bossProjectileSpeed,
+                            velocityY: Math.sin(spreadAngle) * bossProjectileSpeed
+                        });
+                    }
+                } else {
+                    // --- NORMAL / BARRAGE SHOT ---
+                    // If no special attack triggered, just fire one snowball
+                    enemySnowballs.push({
+                        x: enemies[i].x,
+                        y: enemies[i].y,
+                        radius: 10, // Bigger than player snowballs
+                        color: "purple",
+                        velocityX: Math.cos(angle) * bossProjectileSpeed,
+                        velocityY: Math.sin(angle) * bossProjectileSpeed
+                    });
+                }
 
                 enemies[i].lastShot = Date.now(); // Reset the boss's firing timer
+                enemies[i].shotsFired += 1; // Add 1 to the counter
+
+                // Reset the attack pattern
+                if (enemies[i].shotsFired >= 20) {
+                    enemies[i].shotsFired = 0;
+                }
             }
         }
 
@@ -292,6 +385,10 @@ function updateEnemies() {
 
         ctx.restore();
         ctx.closePath();
+
+        if (enemies[i].isBoss) {
+            drawBossHealthBar(enemies[i]);
+        }
 
         // 3. Player Collision (The logic you explained!)
         let distToPlayer = Math.hypot(dx, dy); // We can reuse dx and dy from movement!
@@ -332,7 +429,7 @@ function updateEnemies() {
                     if (enemies[i].isBoss) {
                         bossesKilled += 1;
                         bossActive = false; 
-                        nextBossScore = score + gameConfig.bossSpawnScore;
+                        nextBossScore = score + 150;
                     } else {
                         // Boost Kill Tracker...
                         if (!boostActive) {
@@ -432,6 +529,10 @@ function updateEnemySnowballs() {
         let distance = Math.hypot(dx, dy);
 
         if (distance < player.radius + enemySnowballs[i].radius) {
+            // --- NEW: Create a purple explosion on impact! ---
+            // We use the snowball's X and Y, set the color to purple, and spawn 15 particles
+            createExplosion(enemySnowballs[i].x, enemySnowballs[i].y, "white", 15);
+
             player.health -= 15; // Boss snowballs do heavy damage!
             enemySnowballs.splice(i, 1);
             continue;
