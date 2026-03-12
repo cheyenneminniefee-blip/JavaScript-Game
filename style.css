@@ -1,0 +1,78 @@
+/* Center everything on the screen and make text black */
+body {
+    background-image: url('background.png');
+    background-size: cover;          
+    background-position: center;     
+    background-repeat: no-repeat;    
+    background-attachment: fixed;    
+    color: black; 
+    font-family: 'Arial', sans-serif; 
+
+    display: flex;
+    flex-direction: column; /* Stacks things top-to-bottom instead of side-by-side */
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* CHANGED: Allows the page to scroll if the leaderboard gets huge! */
+    margin: 0;
+    padding: 20px; /* Gives a little breathing room on the top and bottom */
+}
+
+/* The box holding all your menu items */
+.menu-container {
+    background-color: rgba(255, 255, 255, 0.7); /* Slightly see-through white box */
+    padding: 40px 60px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3); /* Gives the menu a nice drop shadow */
+    display: flex;
+    flex-direction: column; /* Stacks everything top-to-bottom */
+    gap: 15px; /* Adds perfect spacing between elements */
+}
+
+/* Make the title huge */
+h1 {
+    margin-top: 0;
+    font-size: 45px;
+    margin-bottom: 10px;
+}
+
+/* Make the Play button massive */
+.play-btn {
+    background-color: #008CBA; 
+    color: white;
+    padding: 20px 40px; /* Bigger padding = bigger button */
+    font-size: 26px; /* Huge text */
+    font-weight: bold;
+    border: none;
+    border-radius: 8px; 
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+    transition: 0.2s;
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+.play-btn:hover {
+    background-color: #00ffff; 
+    color: black;
+    transform: translateY(-3px); 
+}
+
+/* Make the links look exactly like smaller buttons */
+.menu-btn {
+    display: inline-block;
+    background-color: #555555; /* Dark gray for secondary buttons */
+    color: white;
+    padding: 12px 24px;
+    text-decoration: none; /* Removes the ugly blue underline */
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    margin: 0 5px;
+    transition: 0.2s;
+}
+
+.menu-btn:hover {
+    background-color: #777777; 
+    transform: translateY(-2px);
+}

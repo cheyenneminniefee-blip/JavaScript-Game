@@ -42,6 +42,16 @@ let enemySnowballs = []; // A separate list just for the boss's projectiles
 
 let nextBossScore = 150;
 
+// --- LOAD ALL SPRITES ---
+const playerSprite = new Image(); playerSprite.src = 'sprites/player.png';
+const snowmanSprite = new Image(); snowmanSprite.src = 'sprites/snowman.png';
+const runnerSprite = new Image(); runnerSprite.src = 'sprites/runner.png';
+const tankSprite = new Image(); tankSprite.src = 'sprites/tank.png';
+const bossSprite = new Image(); bossSprite.src = 'sprites/boss.png';
+
+const snowballSprite = new Image(); snowballSprite.src = 'sprites/snowball.png';
+const bossSnowballSprite = new Image(); bossSnowballSprite.src = 'sprites/boss_snowball.png';
+
 // 1. Update the mouse position whenever it moves over the canvas
 canvas.addEventListener("mousemove", function(e) {
     mouse.x = e.offsetX; // offsetX/Y gets the coordinates relative to the canvas
@@ -91,30 +101,50 @@ window.addEventListener("keyup", function(e) {
 
 // L1-ST-drawPlayer-20260226
 function drawPlayer() {
-    // This clears the canvas so we don't leave "trails" when moving
+    // Clear the canvas so we don't leave "trails" when moving
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-    ctx.fillStyle = player.color;
-    ctx.fill();
-    ctx.closePath();
+    // Calculate the angle between the player and the mouse cursor
+    let dx = mouse.x - player.x;
+    let dy = mouse.y - player.y;
+    let angle = Math.atan2(dy, dx);
+
+    // Save, translate, and rotate so the player faces the mouse
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(angle);
+
+    // Draw the player sprite
+    ctx.drawImage(
+        playerSprite, 
+        -player.radius, 
+        -player.radius, 
+        player.radius * 2, 
+        player.radius * 2
+    );
+
+    ctx.restore();
 }
 
 // L2-ST-healthBar-20260227
 function drawHealthBar() {
-    // 1. Draw a red background rectangle to represent missing health
-    ctx.fillStyle = "red";
-    ctx.fillRect(20, 20, 100, 20); // x: 20, y: 20, width: 100, height: 20
+    let barX = 20;
+    let barY = 20;
+    let barWidth = 100;
+    let barHeight = 20;
 
-    // 2. Draw a green rectangle on top to represent current health
-    ctx.fillStyle = "green";
+    // 1. Draw a thick black border behind the whole thing
+    ctx.fillStyle = "black";
+    ctx.fillRect(barX - 3, barY - 3, barWidth + 6, barHeight + 6);
 
-    // We use Math.max to ensure the width never drops below 0 if you take extra damage
+    // 2. Draw the red background (missing health)
+    ctx.fillStyle = "#aa0000"; // Darker red looks better
+    ctx.fillRect(barX, barY, barWidth, barHeight);
+
+    // 3. Draw the green current health
+    ctx.fillStyle = "#00ff00"; // Bright neon green
     let currentHealthWidth = Math.max(0, player.health); 
-
-    // Because your max health is 100, it perfectly matches the 100 pixel width!
-    ctx.fillRect(20, 20, currentHealthWidth, 20);
+    ctx.fillRect(barX, barY, currentHealthWidth, barHeight);
 }
 
 // L1-ST-advancedEnemySpawn-20260228
@@ -238,9 +268,29 @@ function updateEnemies() {
 
         // 2. Draw the enemy
         ctx.beginPath();
-        ctx.arc(enemies[i].x, enemies[i].y, enemies[i].radius, 0, Math.PI * 2);
-        ctx.fillStyle = enemies[i].color;
-        ctx.fill();
+        // 2. Draw the enemy
+        ctx.save();
+        ctx.translate(enemies[i].x, enemies[i].y);
+        ctx.rotate(angle); // All enemies use this angle to face the player!
+
+        if (enemies[i].isBoss) {
+            // --- THE BOSS ---
+            ctx.drawImage(bossSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
+
+        } else if (enemies[i].color === "white") {
+            // --- REGULAR SNOWMAN ---
+            ctx.drawImage(snowmanSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
+
+        } else if (enemies[i].color === "cyan") {
+            // --- RUNNER ---
+            ctx.drawImage(runnerSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
+
+        } else if (enemies[i].color === "gray") {
+            // --- TANK ---
+            ctx.drawImage(tankSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
+        }
+
+        ctx.restore();
         ctx.closePath();
 
         // 3. Player Collision (The logic you explained!)
@@ -312,9 +362,14 @@ function updateSnowballs() {
 
         // Draw the snowball
         ctx.beginPath();
-        ctx.arc(snowballs[i].x, snowballs[i].y, snowballs[i].radius, 0, Math.PI * 2);
-        ctx.fillStyle = "white";
-        ctx.fill();
+        // Draw the player snowball sprite
+        ctx.drawImage(
+            snowballSprite,
+            snowballs[i].x - snowballs[i].radius,
+            snowballs[i].y - snowballs[i].radius,
+            snowballs[i].radius * 2,
+            snowballs[i].radius * 2
+        );
         ctx.closePath();
 
         // Check if snowball is off-screen
@@ -361,9 +416,14 @@ function updateEnemySnowballs() {
 
         // Draw the boss snowball
         ctx.beginPath();
-        ctx.arc(enemySnowballs[i].x, enemySnowballs[i].y, enemySnowballs[i].radius, 0, Math.PI * 2);
-        ctx.fillStyle = enemySnowballs[i].color;
-        ctx.fill();
+        // Draw the boss snowball sprite
+        ctx.drawImage(
+            bossSnowballSprite,
+            enemySnowballs[i].x - enemySnowballs[i].radius,
+            enemySnowballs[i].y - enemySnowballs[i].radius,
+            enemySnowballs[i].radius * 2,
+            enemySnowballs[i].radius * 2
+        );
         ctx.closePath();
 
         // Check if it hits the player
@@ -401,23 +461,33 @@ function update() {
 // L1-ST-scoreDisplay-20260227
 // L1-ST-drawHUD-20260301
 function drawHUD() {
-    ctx.fillStyle = "black"; 
+    // --- NEW: Add a drop shadow for high readability ---
+    ctx.shadowColor = "black";
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    ctx.fillStyle = "white"; // White text pops against the game background
 
     // --- CENTER: Score ---
     ctx.textAlign = "center";
-    ctx.font = "30px Arial";
+    ctx.font = "bold 30px Arial";
     ctx.fillText("Score: " + score, canvas.width / 2, 50);
 
     // --- LEFT SIDE: Time & Kills ---
-    // We place these below the health bar (which ends at y = 40)
     ctx.textAlign = "left";
-    ctx.font = "20px Arial";
+    ctx.font = "bold 20px Arial";
     ctx.fillText("Time: " + survivalTime + "s", 20, 70); 
     ctx.fillText("Kills: " + enemiesKilled, 20, 95);
 
     // --- RIGHT SIDE: Bosses Defeated ---
     ctx.textAlign = "right";
     ctx.fillText("Bosses Defeated: " + bossesKilled, canvas.width - 20, 40);
+
+    // --- IMPORTANT: Reset shadows so they don't apply to the sprites! ---
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
 }
 
 // L1-ST-saveScore-20260227

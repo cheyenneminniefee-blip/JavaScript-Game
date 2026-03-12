@@ -6,15 +6,20 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Snowman Showdown</h1>
-    <form action="game.php" method="POST">
+    <div class="menu-container">
+
+        <h1>Snowman Showdown</h1>
+
         <label for="playerName">Enter your name to play:</label>
-        <input type="text" id="playerName" name="playerName" required>
-        <button type="submit">Start Game</button>
-    </form>
-    <nav>
-        <a href="leaderboard.php">Leaderboard</a> | 
-        <a href="about.php">About the Game</a>
-    </nav>
+        <input type="text" id="playerName" placeholder="Cheyenne">
+
+        <button id="startGame" class="play-btn">Start Game</button>
+
+        <div class="bottom-links">
+            <a href="leaderboard.php" class="menu-btn">Leaderboard</a>
+            <a href="about.php" class="menu-btn">About the Game</a>
+        </div>
+
+    </div>
 </body>
 </html>
