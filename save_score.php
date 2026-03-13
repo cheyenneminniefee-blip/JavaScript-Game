@@ -2,11 +2,17 @@
 
 require_once 'functions.php';
 
-$pdo = getDBConnection();
+// Temporarily disabled so it doesn't kill the script!
+// $pdo = getDBConnection();
 
 // Get the raw JSON from JavaScript
 $rawData = file_get_contents("php://input");
 $gameData = json_decode($rawData, true);
+
+// Clean the name before saving!
+$safeName = sanitizePlayerName($gameData['name']);
+
+// ... (keep the rest of your JSON saving code exactly the same)
 
 // Clean the name before saving!
 $safeName = sanitizePlayerName($gameData['name']);

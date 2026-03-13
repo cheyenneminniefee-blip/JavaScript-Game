@@ -6,5 +6,13 @@
         "bossesKilled": 0,
         "survivedTime": 25,
         "dateTime": 1773165793010
+    },
+    {
+        "name": "Cheyenne",
+        "score": 175,
+        "totalKills": 12,
+        "bossesKilled": 0,
+        "survivedTime": 29,
+        "dateTime": 1773427553292
     }
 ]
