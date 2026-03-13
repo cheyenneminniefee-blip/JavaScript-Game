@@ -41,6 +41,16 @@ let enemies = []; // This list holds all the active snowmen
 let lastSpawnTime = Date.now();
 let currentSpawnDelay = 2000; // Starts at 2 seconds
 
+// --- LOAD ALL SOUNDS ---
+const damageSfx = new Audio('sounds/damage.ogg');
+const gameOverSfx = new Audio('sounds/game_over.ogg');
+const snowballHitSfx = new Audio('sounds/snowball_hit.ogg');
+const walkingSfx = new Audio('sounds/walking.ogg');
+
+// --- SET UP THE WALKING LOOP ---
+walkingSfx.loop = true; 
+walkingSfx.volume = 0.4; // Keep footsteps a bit quieter so they aren't annoying!
+
 let bossActive = false; // Acts as an on/off switch for the boss state
 let enemySnowballs = []; // A separate list just for the boss's projectiles
 
@@ -102,6 +112,21 @@ window.addEventListener("keydown", function(e) {
 window.addEventListener("keyup", function(e) {
     keys[e.key] = false;
 });
+
+// L1-ST-audioHelper
+function playSound(soundObject, randomizePitch = false) {
+    let clone = soundObject.cloneNode();
+    clone.volume = soundObject.volume;
+
+    // --- NEW: Pitch Randomization! ---
+    if (randomizePitch) {
+        // Math.random() gives a number from 0 to 1. 
+        // This math gives us a random speed/pitch between 0.85 and 1.15
+        clone.playbackRate = 0.85 + (Math.random() * 0.3);
+    }
+
+    clone.play();
+}
 
 // L1-ST-drawPlayer-20260226
 function drawPlayer() {
@@ -200,14 +225,14 @@ function spawnEnemy() {
         enemySpeed = 2;
         enemyHealth = 3; 
         enemyPoints = 10;   
-    } else if (roll < 0.75) {
+    } else if (roll < 0.70) {
         // Runner (25% chance)
         enemyRadius = 15;
         enemyColor = "cyan"; 
         enemySpeed = 4.5;    
         enemyHealth = 1;     
         enemyPoints = 15;   
-    } else if (roll < 0.95) {
+    } else if (roll < 0.90) {
         // Tank (15% chance)
         enemyRadius = 35;
         enemyColor = "gray"; 
@@ -432,9 +457,10 @@ function updateEnemies() {
         if (distToPlayer < enemies[i].radius + player.radius) {
             // --- NEW: Check if it's the boss! ---
             if (enemies[i].isBoss) {
-                player.health = 0; // Instant death!
+                player.health = 0; 
             } else {
-                player.health -= 10; // Normal enemies only do 10 damage
+                player.health -= 10; 
+                playSound(damageSfx, true); // <--- Add this! (true = randomize pitch)
             }
             enemies.splice(i, 1); // Enemy explodes on the player
             continue; // Skip the rest of the loop for this enemy since it's dead
@@ -454,6 +480,7 @@ function updateEnemies() {
 
                 snowballs.splice(j, 1); // Snowball is always destroyed on impact
                 enemies[i].health -= 1; // Enemy loses 1 health
+                playSound(snowballHitSfx, true); // <--- Add this!
 
                 if (enemies[i].health <= 0) {
                     score += enemies[i].points; 
@@ -566,11 +593,9 @@ function updateEnemySnowballs() {
         let distance = Math.hypot(dx, dy);
 
         if (distance < player.radius + enemySnowballs[i].radius) {
-            // --- NEW: Create a purple explosion on impact! ---
-            // We use the snowball's X and Y, set the color to purple, and spawn 15 particles
-            createExplosion(enemySnowballs[i].x, enemySnowballs[i].y, "white", 35);
-
-            player.health -= 15; // Boss snowballs do heavy damage!
+            createExplosion(enemySnowballs[i].x, enemySnowballs[i].y, "white", 15);
+            player.health -= 15; 
+            playSound(damageSfx, true); // <--- Add this!
             enemySnowballs.splice(i, 1);
             continue;
         }
@@ -586,14 +611,26 @@ function updateEnemySnowballs() {
 // L1-ST-playerMovement-20260226
 function update() {
     let speed = 5;
-    if (keys["w"] || keys["ArrowUp"]) player.y -= speed;
-    if (keys["s"] || keys["ArrowDown"]) player.y += speed;
-    if (keys["a"] || keys["ArrowLeft"]) player.x -= speed;
-    if (keys["d"] || keys["ArrowRight"]) player.x += speed;
-// --- NEW: Keep player inside canvas bounds ---
-    // Math.max and Math.min force the player's coordinates to stay within the canvas dimensions
+    let isMoving = false; // --- NEW: Track if we are moving this frame
+
+    if (keys["w"] || keys["ArrowUp"]) { player.y -= speed; isMoving = true; }
+    if (keys["s"] || keys["ArrowDown"]) { player.y += speed; isMoving = true; }
+    if (keys["a"] || keys["ArrowLeft"]) { player.x -= speed; isMoving = true; }
+    if (keys["d"] || keys["ArrowRight"]) { player.x += speed; isMoving = true; }
+
     player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
     player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+    // --- NEW: Handle the walking sound ---
+    if (isMoving) {
+        // Only call play() if the sound is currently paused to prevent glitching
+        if (walkingSfx.paused) {
+            walkingSfx.play();
+        }
+    } else {
+        // If no keys are pressed, pause the audio immediately
+        walkingSfx.pause();
+    }
 }
 
 // L1-ST-scoreDisplay-20260227
@@ -675,6 +712,8 @@ function createExplosion(x, y, color, particleCount) {
 function gameLoop() {
     // Check for Game Over FIRST!
     if (player.health <= 0) {
+        walkingSfx.pause(); // <--- Make sure we stop the walking sound!
+        playSound(gameOverSfx, false); // <--- Play Game Over (no pitch randomization)
         ctx.fillStyle = "black";
         ctx.font = "60px Arial";
         ctx.textAlign = "center";
