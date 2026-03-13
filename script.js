@@ -10,7 +10,7 @@ let currentPlayerName = localStorage.getItem('currentPlayerName') || 'Anonymous'
 let player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    radius: 15, // Size of the player
+    radius: 20, // Size of the player
     color: "blue",
     health: 100 
 };
@@ -29,7 +29,7 @@ let boostActive = false;
 let boostStartTime = 0;
 let boostKillCount = 0; // Tracks the 30 normal kills specifically for the boost
 
-let score = 150;
+let score = 0;
 let enemiesKilled = 0;
 let bossesKilled = 0;
 let survivalTime = 0; // We will count this in seconds
@@ -190,31 +190,42 @@ function spawnEnemy() {
 
     let roll = Math.random(); 
 
-    // Add enemyPoints to our setup list
-    let enemyRadius, enemyColor, enemySpeed, enemyHealth, enemyPoints; 
+    // Add enemyPoints and new variables for the Spitter logic
+    let enemyRadius, enemyColor, enemySpeed, enemyHealth, enemyPoints, enemyType, enemyLastShot; 
 
-    if (roll < 0.60) {
-        // Regular Snowman
+    if (roll < 0.45) {
+        // Regular Snowman (55% chance)
         enemyRadius = 20;
         enemyColor = "white";
         enemySpeed = 2;
         enemyHealth = 3; 
-        enemyPoints = 10;   // 10 points
-    } else if (roll < 0.85) {
-        // Runner
+        enemyPoints = 10;   
+    } else if (roll < 0.75) {
+        // Runner (25% chance)
         enemyRadius = 15;
         enemyColor = "cyan"; 
         enemySpeed = 4.5;    
         enemyHealth = 1;     
-        enemyPoints = 15;   // 15 points
-    } else {
-        // Tank
+        enemyPoints = 15;   
+    } else if (roll < 0.95) {
+        // Tank (15% chance)
         enemyRadius = 35;
         enemyColor = "gray"; 
         enemySpeed = 0.8;    
         enemyHealth = 10;    
-        enemyPoints = 30;   // 30 points for the big guys!
+        enemyPoints = 30;   
+    } else {
+        // --- NEW: Spitter (5% chance - The Rarest!) ---
+        enemyRadius = 20;
+        enemyColor = "white"; // <-- CHANGED: Now white so the death explosion matches!
+        enemySpeed = 0.5; 
+        enemyHealth = 2; 
+        enemyPoints = 40; 
+        enemyType = "spitter"; 
+        enemyLastShot = Date.now(); 
     }
+
+    // ... (Keep your edge picking logic exactly the same) ...
 
     // --- NEW: Pick a random side to spawn from ---
         let spawnX, spawnY;
@@ -234,15 +245,17 @@ function spawnEnemy() {
             spawnY = Math.random() * canvas.height;
         }
 
-        let snowman = {
-            x: spawnX, // Use the new randomized X
-            y: spawnY, // Use the new randomized Y
+    let snowman = {
+            x: spawnX, 
+            y: spawnY, 
             radius: enemyRadius,
             color: enemyColor,
             speed: enemySpeed,
             health: enemyHealth,
             points: enemyPoints,
-            isBoss: false // Make sure normal enemies are explicitly NOT bosses
+            isBoss: false,
+            type: enemyType || "melee", // Tags it as a spitter or a standard melee enemy
+            lastShot: enemyLastShot || 0 // Saves the firing timer
         };
 
         enemies.push(snowman);
@@ -359,6 +372,26 @@ function updateEnemies() {
             }
         }
 
+        // --- NEW: SPITTER SHOOTING LOGIC ---
+        if (enemies[i].type === "spitter") {
+            // Check if 2500 milliseconds (2.5 seconds) have passed since its last shot
+            if (Date.now() - enemies[i].lastShot > 2500) {
+                let spitterProjectileSpeed = 5; // A bit slower than the player's 8 speed
+
+                // Add a regular white snowball to the enemy snowballs list
+                enemySnowballs.push({
+                    x: enemies[i].x,
+                    y: enemies[i].y,
+                    radius: 5, // Exact same size as the player's snowballs
+                    color: "white", // Exact same color
+                    velocityX: Math.cos(angle) * spitterProjectileSpeed,
+                    velocityY: Math.sin(angle) * spitterProjectileSpeed
+                });
+
+                enemies[i].lastShot = Date.now(); // Reset the firing timer
+            }
+        }
+
         // 2. Draw the enemy
         ctx.beginPath();
         // 2. Draw the enemy
@@ -366,17 +399,21 @@ function updateEnemies() {
         ctx.translate(enemies[i].x, enemies[i].y);
         ctx.rotate(angle); // All enemies use this angle to face the player!
 
-        if (enemies[i].isBoss) {
-            // --- THE BOSS ---
-            ctx.drawImage(bossSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
+                if (enemies[i].isBoss) {
+                    // --- THE BOSS ---
+                    ctx.drawImage(bossSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
 
-        } else if (enemies[i].color === "white") {
-            // --- REGULAR SNOWMAN ---
-            ctx.drawImage(snowmanSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
+                } else if (enemies[i].type === "spitter") {
+                    // --- UPDATED: SPITTER USES SNOWMAN SPRITE ---
+                    ctx.drawImage(snowmanSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
 
-        } else if (enemies[i].color === "cyan") {
-            // --- RUNNER ---
-            ctx.drawImage(runnerSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
+                } else if (enemies[i].color === "white") {
+                    // --- REGULAR SNOWMAN ---
+                    ctx.drawImage(snowmanSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
+
+                } else if (enemies[i].color === "cyan") {
+                    // --- RUNNER ---
+                    ctx.drawImage(runnerSprite, -enemies[i].radius, -enemies[i].radius, enemies[i].radius * 2, enemies[i].radius * 2);
 
         } else if (enemies[i].color === "gray") {
             // --- TANK ---
@@ -531,7 +568,7 @@ function updateEnemySnowballs() {
         if (distance < player.radius + enemySnowballs[i].radius) {
             // --- NEW: Create a purple explosion on impact! ---
             // We use the snowball's X and Y, set the color to purple, and spawn 15 particles
-            createExplosion(enemySnowballs[i].x, enemySnowballs[i].y, "white", 15);
+            createExplosion(enemySnowballs[i].x, enemySnowballs[i].y, "white", 35);
 
             player.health -= 15; // Boss snowballs do heavy damage!
             enemySnowballs.splice(i, 1);
