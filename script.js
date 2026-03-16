@@ -25,6 +25,13 @@ let lastPlayerShot = 0;
 // L1-ST-particleSystem-20260304
 let particles = [];
 
+// Screen Shake variables
+let shakeTimer = 0;
+let shakeIntensity = 0;
+
+// Damage Markers list
+let damageMarkers = [];
+
 let boostActive = false;
 let boostStartTime = 0;
 let boostKillCount = 0; // Tracks the 30 normal kills specifically for the boost
@@ -210,13 +217,13 @@ function drawBossHealthBar(boss) {
 // L1-ST-advancedEnemySpawn-20260228
 // L1-ST-enemyPointsSetup-20260301
 function spawnEnemy() {
-    // Stop spawning if the boss is here! (We will use this in the next step)
+    // Stop spawning if the boss is here!
     if (typeof bossActive !== 'undefined' && bossActive) return;
 
     let roll = Math.random(); 
 
-    // Add enemyPoints and new variables for the Spitter logic
-    let enemyRadius, enemyColor, enemySpeed, enemyHealth, enemyPoints, enemyType, enemyLastShot; 
+    // 1. DECLARE ALL VARIABLES (Make sure enemyDamage is in this list!)
+    let enemyRadius, enemyColor, enemySpeed, enemyHealth, enemyPoints, enemyType, enemyLastShot, enemyDamage; 
 
     if (roll < 0.45) {
         // Regular Snowman (55% chance)
@@ -225,6 +232,7 @@ function spawnEnemy() {
         enemySpeed = 2;
         enemyHealth = 3; 
         enemyPoints = 10;   
+        enemyDamage = 10; // <--- ADDED
     } else if (roll < 0.70) {
         // Runner (25% chance)
         enemyRadius = 15;
@@ -232,6 +240,7 @@ function spawnEnemy() {
         enemySpeed = 4.5;    
         enemyHealth = 1;     
         enemyPoints = 15;   
+        enemyDamage = 5;  // <--- ADDED
     } else if (roll < 0.90) {
         // Tank (15% chance)
         enemyRadius = 35;
@@ -239,52 +248,54 @@ function spawnEnemy() {
         enemySpeed = 0.8;    
         enemyHealth = 10;    
         enemyPoints = 30;   
+        enemyDamage = 15; // <--- ADDED
     } else {
-        // --- NEW: Spitter (5% chance - The Rarest!) ---
+        // Spitter (5% chance)
         enemyRadius = 20;
-        enemyColor = "white"; // <-- CHANGED: Now white so the death explosion matches!
+        enemyColor = "white"; 
         enemySpeed = 0.5; 
         enemyHealth = 2; 
         enemyPoints = 40; 
         enemyType = "spitter"; 
         enemyLastShot = Date.now(); 
+        enemyDamage = 10; // <--- ADDED
     }
 
-    // ... (Keep your edge picking logic exactly the same) ...
+    // 2. PICK A RANDOM SIDE (The "Edge Picking" logic)
+    let spawnX, spawnY;
+    let edge = Math.floor(Math.random() * 4); 
 
-    // --- NEW: Pick a random side to spawn from ---
-        let spawnX, spawnY;
-        let edge = Math.floor(Math.random() * 4); // 0: Top, 1: Right, 2: Bottom, 3: Left
+    if (edge === 0) { // Top
+        spawnX = Math.random() * canvas.width;
+        spawnY = -40;
+    } else if (edge === 1) { // Right
+        spawnX = canvas.width + 40;
+        spawnY = Math.random() * canvas.height;
+    } else if (edge === 2) { // Bottom
+        spawnX = Math.random() * canvas.width;
+        spawnY = canvas.height + 40;
+    } else { // Left
+        spawnX = -40;
+        spawnY = Math.random() * canvas.height;
+    }
 
-        if (edge === 0) { // Top
-            spawnX = Math.random() * canvas.width;
-            spawnY = -40;
-        } else if (edge === 1) { // Right
-            spawnX = canvas.width + 40;
-            spawnY = Math.random() * canvas.height;
-        } else if (edge === 2) { // Bottom
-            spawnX = Math.random() * canvas.width;
-            spawnY = canvas.height + 40;
-        } else { // Left
-            spawnX = -40;
-            spawnY = Math.random() * canvas.height;
-        }
-
+    // 3. CREATE THE OBJECT (Double check the commas here!)
     let snowman = {
-            x: spawnX, 
-            y: spawnY, 
-            radius: enemyRadius,
-            color: enemyColor,
-            speed: enemySpeed,
-            health: enemyHealth,
-            points: enemyPoints,
-            isBoss: false,
-            type: enemyType || "melee", // Tags it as a spitter or a standard melee enemy
-            lastShot: enemyLastShot || 0 // Saves the firing timer
-        };
+        x: spawnX, 
+        y: spawnY, 
+        radius: enemyRadius,
+        color: enemyColor,
+        speed: enemySpeed,
+        health: enemyHealth,
+        points: enemyPoints,
+        damage: enemyDamage, // <--- MAKE SURE THIS IS HERE
+        isBoss: false,
+        type: enemyType || "melee", 
+        lastShot: enemyLastShot || 0 
+    };
 
-        enemies.push(snowman);
-    }
+    enemies.push(snowman);
+}
 
 // L1-ST-bossSpawner-20260301
 function spawnBoss() {
@@ -454,16 +465,23 @@ function updateEnemies() {
 
         // 3. Player Collision (The logic you explained!)
         let distToPlayer = Math.hypot(dx, dy); // We can reuse dx and dy from movement!
+        // Inside updateEnemies() -> Player Collision section
         if (distToPlayer < enemies[i].radius + player.radius) {
-            // --- NEW: Check if it's the boss! ---
             if (enemies[i].isBoss) {
                 player.health = 0; 
+                triggerShake(20, 30); // Massive shake for boss hit!
             } else {
-                player.health -= 10; 
-                playSound(damageSfx, true); // <--- Add this! (true = randomize pitch)
+                player.health -= enemies[i].damage; 
+
+                // --- NEW ADDITIONS ---
+                // Change this line in your Player Collision section:
+                createDamageMarker(player.x, player.y - 20, enemies[i].damage, "red");
+                triggerShake(enemies[i].damage * 2, 10); // Shake intensity based on damage!
+
+                playSound(damageSfx, true);
             }
-            enemies.splice(i, 1); // Enemy explodes on the player
-            continue; // Skip the rest of the loop for this enemy since it's dead
+            enemies.splice(i, 1);
+            continue;
         }
 
         // 4. Snowball Collision (Now with Enemy Health!)
@@ -480,6 +498,11 @@ function updateEnemies() {
 
                 snowballs.splice(j, 1); // Snowball is always destroyed on impact
                 enemies[i].health -= 1; // Enemy loses 1 health
+
+                // --- NEW: Add a damage marker for the enemy! ---
+                // We use "white" so it stands out but feels different from player damage
+                createDamageMarker(enemies[i].x, enemies[i].y - 20, "1", "cornflowerblue");
+                
                 playSound(snowballHitSfx, true); // <--- Add this!
 
                 if (enemies[i].health <= 0) {
@@ -592,10 +615,24 @@ function updateEnemySnowballs() {
         let dy = player.y - enemySnowballs[i].y;
         let distance = Math.hypot(dx, dy);
 
+        // Inside updateEnemySnowballs() -> Collision with Player
         if (distance < player.radius + enemySnowballs[i].radius) {
+            // Visual explosion effect for the snowball breaking
             createExplosion(enemySnowballs[i].x, enemySnowballs[i].y, "white", 15);
-            player.health -= 15; 
-            playSound(damageSfx, true); // <--- Add this!
+
+            // Deduct health (we set this to 10 earlier)
+            player.health -= 10; 
+
+            // --- NEW ADDITIONS ---
+            // 1. Pop up a red "10" above the player
+            createDamageMarker(player.x, player.y - 20, 10, "red");
+
+            // 2. Add a slight screen shake (10 damage * 0.8 = 8 intensity)
+            triggerShake(8, 10); 
+
+            playSound(damageSfx, true);
+
+            // Remove the snowball
             enemySnowballs.splice(i, 1);
             continue;
         }
@@ -707,26 +744,88 @@ function createExplosion(x, y, color, particleCount) {
     }
 }
 
+// Creates a floating red number
+// Add 'color' as a third piece of info
+function createDamageMarker(x, y, amount, color) {
+    damageMarkers.push({
+        x: x,
+        y: y,
+        amount: amount,
+        color: color, // Save the color here
+        alpha: 1,       
+        lifeSpan: 60    
+    });
+}
+
+// Moves and draws the markers
+function updateDamageMarkers() {
+    for (let i = damageMarkers.length - 1; i >= 0; i--) {
+        let dm = damageMarkers[i];
+
+        dm.y -= 1;        
+        dm.alpha -= 0.02; 
+        dm.lifeSpan--;
+
+        // The Fix: If alpha goes below 0, the marker is dead
+        if (dm.alpha <= 0 || dm.lifeSpan <= 0) {
+            damageMarkers.splice(i, 1);
+            continue;
+        }
+
+        ctx.save();
+        // The Fix: Math.max ensures alpha is never a weird negative number
+        ctx.globalAlpha = Math.max(0, dm.alpha);
+        ctx.fillStyle = dm.color; // Use the custom color
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(dm.amount, dm.x, dm.y);
+        ctx.restore();
+    }
+}
+
+// Trigger screen shake
+function triggerShake(intensity, duration) {
+    shakeIntensity = intensity;
+    shakeTimer = duration;
+}
+
 // This creates a loop that runs about 60 times per second
 // L2-ST-gameOver-20260227
 function gameLoop() {
     // Check for Game Over FIRST!
+    // Locate this inside your gameLoop() function
     if (player.health <= 0) {
-        walkingSfx.pause(); // <--- Make sure we stop the walking sound!
-        playSound(gameOverSfx, false); // <--- Play Game Over (no pitch randomization)
-        ctx.fillStyle = "black";
-        ctx.font = "60px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+        walkingSfx.pause(); 
+        playSound(gameOverSfx, false);
 
-        ctx.font = "30px Arial";
-        ctx.fillText("Final Score: " + score, canvas.width / 2, canvas.height / 2 + 50);
+        // Save data to the server
         saveGameData(currentPlayerName, score);
-        return; // This completely stops the loop! No more movement or drawing.
+
+        // 1. Update the overlay text
+        document.getElementById("finalScoreDisplay").innerText = "Final Score: " + score;
+
+        // 2. Show the floating UI
+        document.getElementById("gameOverUI").style.display = "block";
+
+        // 3. Darken the game screen slightly so the UI pops
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Important: Stop the loop so it doesn't keep trying to draw
+        return; 
     }
 
     // 1. Clear the canvas first so we don't leave trails!
     ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
+    // --- SCREEN SHAKE START ---
+    if (shakeTimer > 0) {
+        let shakeX = (Math.random() - 0.5) * shakeIntensity;
+        let shakeY = (Math.random() - 0.5) * shakeIntensity;
+        ctx.save();
+        ctx.translate(shakeX, shakeY);
+        shakeTimer--;
+    }
 
     // 2. Do all the math for movement
     update(); 
@@ -763,8 +862,15 @@ function gameLoop() {
     updateEnemySnowballs(); 
     updateEnemies();
     updateParticles();
+    updateDamageMarkers();
     drawHUD();
     drawHealthBar();
+
+    // --- SCREEN SHAKE END ---
+    if (shakeIntensity > 0 && shakeTimer >= 0) {
+        // Only restore if we actually saved!
+        if (shakeTimer >= 0) ctx.restore(); 
+    }
 
     // 4. Repeat
     requestAnimationFrame(gameLoop);

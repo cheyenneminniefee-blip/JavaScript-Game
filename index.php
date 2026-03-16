@@ -8,7 +8,7 @@
 <body>
     <div class="menu-container">
 
-        <h1>Snowman Showdown</h1>
+        <h1>Snow-Pocalypse</h1>
 
         <label for="playerName">Enter your name to play:</label>
         <input type="text" id="playerName">
