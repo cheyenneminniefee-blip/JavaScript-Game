@@ -37,6 +37,20 @@
             max-height: 80vh; 
             overflow-y: auto; /* Adds a scrollbar inside the box if the list is long */
         }
+        
+        /* --- NEW: Style for the "Latest Run" row --- */
+        .latest-run-divider {
+            background-color: #333;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .latest-run-row {
+            background-color: #d1ecf1; /* A nice light blue to highlight their run */
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -70,15 +84,42 @@
             $leaderboard = json_decode($data, true);
 
             if (!empty($leaderboard)) {
+                
+                // --- NEW STEP 1: Find the absolute most recent game played ---
+                $latestRun = null;
+                $highestTime = 0;
+                foreach ($leaderboard as $entry) {
+                    if (isset($entry['dateTime']) && $entry['dateTime'] > $highestTime) {
+                        $highestTime = $entry['dateTime'];
+                        $latestRun = $entry;
+                    }
+                }
+
+                // --- NEW STEP 2: Sort the array as usual ---
                 usort($leaderboard, function($a, $b) use ($sortKey) {
                     return $b[$sortKey] <=> $a[$sortKey]; 
                 });
 
+                // --- NEW STEP 3: Find what rank their latest run just got ---
+                $latestRunRank = 0;
+                $rankCounter = 1;
+                foreach ($leaderboard as $entry) {
+                    if (isset($entry['dateTime']) && $entry['dateTime'] === $highestTime) {
+                        $latestRunRank = $rankCounter;
+                        break;
+                    }
+                    $rankCounter++;
+                }
+
+                // --- NEW STEP 4: Slice the array so we only have the Top 10 ---
+                $top10 = array_slice($leaderboard, 0, 10);
+
                 echo "<table>";
                 echo "<tr><th>Rank</th><th>Player Name</th><th>Score</th><th>Kills</th><th>Bosses Defeated</th><th>Time Survived</th><th>Date Played</th></tr>";
 
+                // 1. Draw the Top 10
                 $rank = 1;
-                foreach ($leaderboard as $entry) {
+                foreach ($top10 as $entry) {
                     $name = htmlspecialchars($entry['name']);
                     $score = htmlspecialchars($entry['score']);
                     $kills = htmlspecialchars($entry['totalKills']); 
@@ -92,6 +133,25 @@
                     echo "<tr><td>{$rank}</td><td><strong>{$name}</strong></td><td>{$score}</td><td>{$kills}</td><td>{$bosses}</td><td>{$survived}s</td><td>{$playedAt}</td></tr>";
                     $rank++; 
                 }
+
+                // 2. Draw the Latest Run underneath!
+                if ($latestRun) {
+                    $name = htmlspecialchars($latestRun['name']);
+                    $score = htmlspecialchars($latestRun['score']);
+                    $kills = htmlspecialchars($latestRun['totalKills']); 
+                    $bosses = htmlspecialchars($latestRun['bossesKilled']); 
+                    $survived = htmlspecialchars($latestRun['survivedTime']); 
+                    
+                    $rawSeconds = $latestRun['dateTime'] / 1000;
+                    $cleanSeconds = round($rawSeconds); 
+                    $playedAt = date("m/d/Y H:i", $cleanSeconds);
+
+                    // Add a nice dark divider row so it stands out
+                    echo "<tr><td colspan='7' class='latest-run-divider'>Your Latest Run</td></tr>";
+                    // Draw their actual data
+                    echo "<tr class='latest-run-row'><td>{$latestRunRank}</td><td><strong>{$name}</strong></td><td>{$score}</td><td>{$kills}</td><td>{$bosses}</td><td>{$survived}s</td><td>{$playedAt}</td></tr>";
+                }
+
                 echo "</table>";
             } else {
                 echo "<p>No scores yet! Be the first to play!</p>";
