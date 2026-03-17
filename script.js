@@ -39,6 +39,14 @@ let boostKillCount = 0; // Tracks the 30 normal kills specifically for the boost
 let score = 0;
 let enemiesKilled = 0;
 let bossesKilled = 0;
+
+// --- NEW: ULTIMATE MODE CHECK ---
+// If the flag exists and is true, we set bossesKilled to 100 immediately!
+let isUltimateMode = typeof ULTIMATE_MODE !== 'undefined' && ULTIMATE_MODE;
+if (isUltimateMode) {
+    bossesKilled = 100; // This will trigger your level 100 math perfectly!
+}
+
 let survivalTime = 0; // We will count this in seconds
 let gameStartTime = Date.now(); // Records the exact millisecond the game started
 
@@ -332,20 +340,25 @@ function updateEnemies() {
         enemies[i].x += Math.cos(angle) * enemies[i].speed;
         enemies[i].y += Math.sin(angle) * enemies[i].speed;
 
-        // --- NEW: BOSS SHOOTING LOGIC ---
-        if (enemies[i].isBoss) {
+                // --- NEW: BOSS SHOOTING LOGIC ---
+                if (enemies[i].isBoss) {
 
-            // --- UPDATED: Dynamic Boss Cooldown ---
-            let bossCooldown = 1500; // Normal attack speed (2 seconds)
+                    // --- UPDATED: Dynamic Boss Cooldown based on bosses killed ---
+                    // Base cooldown is 1500ms. Subtract 150ms for every boss defeated.
+                    // Math.max ensures the cooldown never drops below 500ms (so it doesn't become impossible!)
+                    let bossCooldown = Math.max(250, 1500 - (bossesKilled * 150)); 
 
-            // If the boss has fired 10 or more times, enter BARRAGE MODE! (200ms delay)
-            if (enemies[i].shotsFired >= 10) {
-                bossCooldown = 200; 
-            }
+                    // If the boss has fired 10 or more times, enter BARRAGE MODE! 
+                    if (enemies[i].shotsFired >= 10) {
+                        // Base barrage is 200ms. Subtract 20ms for every boss defeated.
+                        // Cap it at 50ms (which is basically a solid laser beam of snowballs!)
+                        bossCooldown = Math.max(50, 200 - (bossesKilled * 20)); 
+                    }
 
-            // Check if enough time has passed based on our dynamic cooldown
-            if (Date.now() - enemies[i].lastShot > bossCooldown) {
-                let bossProjectileSpeed = 6;
+                    // Check if enough time has passed based on our dynamic cooldown
+                    if (Date.now() - enemies[i].lastShot > bossCooldown) {
+                        let bossProjectileSpeed = 6;
+                        // ... (the rest of your burst/shotgun logic stays exactly the same) ...
 
                 // --- NEW: SHOTGUN & BURST LOGIC ---
                 // Only allow special attacks during the "normal" phase (shots 0-9)
@@ -799,7 +812,9 @@ function gameLoop() {
         playSound(gameOverSfx, false);
 
         // Save data to the server
-        saveGameData(currentPlayerName, score);
+        if (!isUltimateMode) {
+            saveGameData(currentPlayerName, score);
+        }
 
         // 1. Update the overlay text
         document.getElementById("finalScoreDisplay").innerText = "Final Score: " + score;
@@ -838,6 +853,14 @@ function gameLoop() {
     // Math.max ensures the delay never drops below 500ms (half a second) so it remains playable!
     currentSpawnDelay = Math.max(500, 2000 - (survivalTime * 20));
 
+    // ONLY spawn regular enemies if we are NOT in ultimate mode
+    if (!isUltimateMode) {
+        if (Date.now() - lastSpawnTime > currentSpawnDelay) {
+            spawnEnemy();
+            lastSpawnTime = Date.now(); 
+        }
+    }
+
     // Check if it is time to spawn a new enemy
     if (Date.now() - lastSpawnTime > currentSpawnDelay) {
         spawnEnemy();
@@ -852,8 +875,12 @@ function gameLoop() {
 
     // --- NEW BOSS CHECK ---
     // If the boss isn't already active AND our score is high enough...
-    if (!bossActive && score >= nextBossScore) {
-        spawnBoss();
+    // --- NORMAL BOSS CHECK ---
+    // ONLY check for normal boss spawns if we are NOT in ultimate mode
+    if (!isUltimateMode) {
+        if (!bossActive && score >= nextBossScore) {
+            spawnBoss();
+        }
     }
 
     // 3. Draw everything
@@ -874,6 +901,11 @@ function gameLoop() {
 
     // 4. Repeat
     requestAnimationFrame(gameLoop);
+}
+
+// --- NEW: SPAWN ULTIMATE BOSS ---
+if (isUltimateMode) {
+    spawnBoss(); // Drop them right into the action
 }
 
 gameLoop(); // Starts the game

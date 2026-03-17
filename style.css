@@ -76,3 +76,60 @@ h1 {
     background-color: #777777; 
     transform: translateY(-2px);
 }
+
+/* --- THE GRID LAYOUT --- */
+.menu-button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Creates two columns of equal size (1 fraction each) */
+    gap: 15px; /* Puts a nice, even gap between all the buttons */
+    width: 100%;
+    max-width: 400px; /* Keeps the buttons from stretching too wide on massive screens */
+    margin: 20px auto; /* Centers the grid on the page */
+}
+
+/* --- YOUR STANDARD BUTTONS (Optional, adjust to match your current style) --- */
+.standard-btn {
+    background-color: #3498db;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    text-decoration: none;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    border-radius: 8px;
+    border: 2px solid #2980b9;
+}
+
+/* --- THE ULTIMATE BOSS BUTTON --- */
+.ultimate-btn {
+    /* This makes it stretch across both the Leaderboard and About columns! */
+    grid-column: span 2; 
+
+    /* Center the text and pad it out */
+    padding: 18px;
+    text-align: center;
+    text-decoration: none;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: 20px; /* Slightly larger text to show it means business */
+    text-transform: uppercase;
+
+    /* The "Boss" Styling: A dark purple gradient with a glowing border */
+    background: linear-gradient(45deg, #4a00e0, #8e2de2); 
+    color: white;
+    border: 2px solid #dcdde1;
+    border-radius: 8px;
+
+    /* A subtle purple drop-shadow to make it glow */
+    box-shadow: 0 0 15px rgba(142, 45, 226, 0.6); 
+
+    /* Smooth animation for when they hover over it */
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* Make it pop when the mouse hovers over it! */
+.ultimate-btn:hover {
+    transform: scale(1.03); /* Zooms in slightly */
+    box-shadow: 0 0 25px rgba(142, 45, 226, 1); /* Intense glow */
+    cursor: pointer;
+}

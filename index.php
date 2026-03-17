@@ -15,9 +15,11 @@
 
         <button id="startGame" class="play-btn">Start Game</button>
 
-        <div class="bottom-links">
-            <a href="leaderboard.php" class="menu-btn">Leaderboard</a>
-            <a href="about.php" class="menu-btn">About the Game</a>
+        <div class="menu-button-grid">
+            <a href="leaderboard.php" class="standard-btn">Leaderboard</a>
+            <a href="about.php" class="standard-btn">About</a>
+
+            <a href="ultimate_boss.php" class="ultimate-btn">Ultimate Bossfight</a>
         </div>
 
         </div>
