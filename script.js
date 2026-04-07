@@ -12,7 +12,14 @@ let player = {
     y: canvas.height / 2,
     radius: 20, // Size of the player
     color: "blue",
-    health: 100 
+    health: 100,
+    isDashing: false,
+    dashSpeed: 25,       // How fast they move during the dash
+    dashDuration: 150,   // How long the dash lasts (in milliseconds)
+    dashCooldown: 1000,  // Time before they can dash again (1 second)
+    lastDashTime: 0,
+    dashAngle: 0,
+    shotsFired: 0        // --- NEW: Tracks how many snowballs the player throws ---
 };
 
 // L1-ST-keyTracking-20260226
@@ -46,6 +53,8 @@ let isUltimateMode = typeof ULTIMATE_MODE !== 'undefined' && ULTIMATE_MODE;
 if (isUltimateMode) {
     bossesKilled = 100; // This will trigger your level 100 math perfectly!
 }
+
+let isVictory = false; // Tracks if the player beat the Ultimate Boss
 
 let survivalTime = 0; // We will count this in seconds
 let gameStartTime = Date.now(); // Records the exact millisecond the game started
@@ -89,6 +98,10 @@ canvas.addEventListener("mousemove", function(e) {
 
 // 2. Listen for a mouse click to pull the trigger
 canvas.addEventListener("mousedown", function(e) {
+
+    // --- THE FIX: Only allow the Left Click (Button 0) to fire snowballs! ---
+    if (e.button !== 0) return; 
+
     // --- NEW: Cooldown Check ---
     // --- UPDATED: Dynamic Cooldown Check ---
       // 50ms is crazy fast (rapid fire!), 300ms is normal
@@ -97,25 +110,96 @@ canvas.addEventListener("mousedown", function(e) {
       if (Date.now() - lastPlayerShot < currentCooldown) return; 
 
       lastPlayerShot = Date.now();
+
+    // ... the rest of your shooting math stays exactly the same ...
+
+      lastPlayerShot = Date.now();
     // 1. Find the distance between the player and the mouse click
-    let dx = mouse.x - player.x;
-    let dy = mouse.y - player.y;
+        let dx = mouse.x - player.x;
+        let dy = mouse.y - player.y;
 
-    // 2. Calculate the angle 
-    let angle = Math.atan2(dy, dx);
+        // 2. Calculate the angle 
+        let angle = Math.atan2(dy, dx);
 
-    // 3. Set how fast the snowball should fly
-    let snowballSpeed = 8;
+        // 3. Set how fast the snowball should fly
+        let snowballSpeed = 8;
 
-    // 4. Create the snowball object and add it to our list
-    snowballs.push({
-        x: player.x,
-        y: player.y,
-        radius: 5,
-        color: "white",
-        velocityX: Math.cos(angle) * snowballSpeed,
-        velocityY: Math.sin(angle) * snowballSpeed
+        // --- NEW: INCREMENT SHOTS AND CHECK FOR SHOTGUN ---
+        player.shotsFired++; // Add 1 to the tally every time they click
+
+        // The modulo operator (%) checks the remainder. 
+        // If shotsFired divided by 10 has a remainder of 0, it's a multiple of 10!
+        if (player.shotsFired % 10 === 0) {
+
+            // --- POWER UP: FIRE A 5-SHOT SPREAD ---
+            for (let spread = -1; spread <= 1; spread++) {
+                // We use 0.15 radians to tightly group the spread so it hits hard
+                let spreadAngle = angle + (spread * 0.15); 
+
+                snowballs.push({
+                    x: player.x,
+                    y: player.y,
+                    radius: 6, // Make the shotgun pellets slightly bigger!
+                    color: "cyan", // Give them a cool visual color so the player knows it's a power-shot
+                    velocityX: Math.cos(spreadAngle) * snowballSpeed,
+                    velocityY: Math.sin(spreadAngle) * snowballSpeed
+                });
+            }
+
+        } else {
+            // --- NORMAL SHOT ---
+            snowballs.push({
+                x: player.x,
+                y: player.y,
+                radius: 5,
+                color: "white",
+                velocityX: Math.cos(angle) * snowballSpeed,
+                velocityY: Math.sin(angle) * snowballSpeed
+            });
+        }
     });
+
+// --- NEW: RIGHT-CLICK DASH LISTENER ---
+canvas.addEventListener('contextmenu', function(e) {
+    // Stop the normal right-click menu from appearing!
+    e.preventDefault(); 
+
+    // Only allow dashing if we are in Ultimate Mode and the player is alive
+    if (player.health <= 0) return;
+
+    let currentTime = Date.now();
+
+    // Check if the dash is off cooldown and we aren't already dashing
+    if (!player.isDashing && currentTime - player.lastDashTime > player.dashCooldown) {
+
+        // Find exactly where the mouse is on the canvas
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // 1. Calculate the raw distance between the player and the mouse (dx, dy)
+        let dx = mouseX - player.x;
+        let dy = mouseY - player.y;
+
+        // Calculate the angle from the player to the mouse
+        player.dashAngle = Math.atan2(dy, dx);
+
+        // --- THE FIX: DYNAMIC DASH SPEED ---
+        // 2. Find the total distance in pixels using Math.hypot
+        let distanceToMouse = Math.hypot(dx, dy);
+
+        // 3. Divide by 10 so the speed isn't massive, then cap it at a maximum of 25
+        let calculatedSpeed = distanceToMouse / 10;
+        player.dashSpeed = Math.min(25, calculatedSpeed);
+
+        // 4. Ensure there is a minimum dash speed so they don't just dash in place!
+        // (Optional: If they click directly on themselves, they still move a tiny bit)
+        player.dashSpeed = Math.max(5, player.dashSpeed);
+
+        // Trigger the dash!
+        player.isDashing = true;
+        player.lastDashTime = currentTime;
+    }
 });
 
 // This listens for when a key is pushed down
@@ -309,18 +393,24 @@ function spawnEnemy() {
 function spawnBoss() {
     bossActive = true; // Turn on the boss state!
 
+    // --- THE FIX: Calculate health, but cap it at a maximum of 250 ---
+    let calculatedHealth = Math.min(300, 50 + (bossesKilled * 10));
+
     let boss = {
         x: canvas.width / 2,
         y: -100, // Starts off-screen
         radius: 60, // MASSIVE
         color: "purple", // Give the boss a scary, unique color
         speed: 1, // Slow, menacing pace
-        health: 50 + (bossesKilled * 10),
-        maxHealth: 50 + (bossesKilled * 10),
+
+        // Use our new capped variable here!
+        health: calculatedHealth,
+        maxHealth: calculatedHealth,
+
         points: 200, // Huge score payout
         isBoss: true, // A special flag so our code knows this is the boss
         lastShot: Date.now(), // Tracks when it last fired a snowball
-        shotsFired: 0 // --- NEW: Keep track of how many snowballs it has thrown! ---
+        shotsFired: 0 // Keep track of how many snowballs it has thrown!
     };
 
     enemies.push(boss);
@@ -527,9 +617,20 @@ function updateEnemies() {
                     createExplosion(enemies[i].x, enemies[i].y, enemies[i].color, 25);
 
                     if (enemies[i].isBoss) {
-                        bossesKilled += 1;
-                        bossActive = false; 
-                        nextBossScore = score + 150;
+                        // --- NEW: Check if this is the Ultimate Boss! ---
+                        if (isUltimateMode) {
+                            isVictory = true; // Trigger the win screen!
+                        } else {
+                            // Normal boss death logic
+                            bossesKilled += 1;
+                            bossActive = false; 
+
+                            // --- THE FIX: Scaling score requirement! ---
+                            // Base gap is 150, but adds 50 more points for every boss beaten.
+                            // Boss 1 gap: 150. Boss 2 gap: 200. Boss 3 gap: 250, etc.
+                            let scoreGap = 150 + (bossesKilled * 50);
+                            nextBossScore = score + scoreGap;
+                        }
                     } else {
                         // Boost Kill Tracker...
                         if (!boostActive) {
@@ -623,32 +724,66 @@ function updateEnemySnowballs() {
         );
         ctx.closePath();
 
-        // Check if it hits the player
+        // 1. Check if it hits the player
         let dx = player.x - enemySnowballs[i].x;
         let dy = player.y - enemySnowballs[i].y;
         let distance = Math.hypot(dx, dy);
 
-        // Inside updateEnemySnowballs() -> Collision with Player
         if (distance < player.radius + enemySnowballs[i].radius) {
             // Visual explosion effect for the snowball breaking
             createExplosion(enemySnowballs[i].x, enemySnowballs[i].y, "white", 15);
 
-            // Deduct health (we set this to 10 earlier)
+            // Deduct health
             player.health -= 10; 
 
-            // --- NEW ADDITIONS ---
-            // 1. Pop up a red "10" above the player
+            // Pop up a red "10" above the player and shake screen
             createDamageMarker(player.x, player.y - 20, 10, "red");
-
-            // 2. Add a slight screen shake (10 damage * 0.8 = 8 intensity)
             triggerShake(8, 10); 
-
             playSound(damageSfx, true);
 
             // Remove the snowball
             enemySnowballs.splice(i, 1);
             continue;
         }
+
+// ... (Player collision check happens just above this) ...
+
+        // --- NEW: ONLY boss snowballs can hurt regular enemies! ---
+        // Boss snowballs are "purple", Spitter snowballs are "white".
+        if (enemySnowballs[i].color === "purple") {
+            let snowballDestroyed = false;
+
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                // CRITICAL: Do not let the boss shoot itself!
+                if (enemies[j].isBoss) continue;
+
+                let distEx = enemies[j].x - enemySnowballs[i].x;
+                let distEy = enemies[j].y - enemySnowballs[i].y;
+                let distE = Math.hypot(distEx, distEy);
+
+                if (distE < enemies[j].radius + enemySnowballs[i].radius) {
+                    // The boss snowball hit a regular enemy!
+                    enemies[j].health -= 10;
+
+                    createExplosion(enemySnowballs[i].x, enemySnowballs[i].y, "purple", 10);
+                    createDamageMarker(enemies[j].x, enemies[j].y - 20, "10", "purple");
+
+                    if (enemies[j].health <= 0) {
+                        createExplosion(enemies[j].x, enemies[j].y, enemies[j].color, 25);
+                        enemies.splice(j, 1); 
+                    }
+
+                    // Remove the boss snowball
+                    enemySnowballs.splice(i, 1);
+                    snowballDestroyed = true;
+                    break; 
+                }
+            }
+
+            // If the snowball hit an enemy and was destroyed, skip the rest of the loop
+            if (snowballDestroyed) continue;
+        }
+        // -----------------------------------------------------------
 
         // Clean up if it goes off-screen
         if (enemySnowballs[i].x < 0 || enemySnowballs[i].x > canvas.width || 
@@ -662,12 +797,25 @@ function updateEnemySnowballs() {
 function update() {
     let speed = 5;
     let isMoving = false; // --- NEW: Track if we are moving this frame
+    if (player.isDashing) {
+        // DASH MOVEMENT
+        let dashTimeElapsed = Date.now() - player.lastDashTime;
+
+        if (dashTimeElapsed < player.dashDuration) {
+            // Force the player forward at dash speed using the angle we calculated
+            player.x += Math.cos(player.dashAngle) * player.dashSpeed;
+            player.y += Math.sin(player.dashAngle) * player.dashSpeed;
+        } else {
+            // Dash is over!
+            player.isDashing = false;
+        }
+    } else {
 
     if (keys["w"] || keys["ArrowUp"]) { player.y -= speed; isMoving = true; }
     if (keys["s"] || keys["ArrowDown"]) { player.y += speed; isMoving = true; }
     if (keys["a"] || keys["ArrowLeft"]) { player.x -= speed; isMoving = true; }
     if (keys["d"] || keys["ArrowRight"]) { player.x += speed; isMoving = true; }
-
+    }
     player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
     player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
 
@@ -803,8 +951,42 @@ function triggerShake(intensity, duration) {
 }
 
 // This creates a loop that runs about 60 times per second
-// L2-ST-gameOver-20260227
-function gameLoop() {
+    // L2-ST-gameOver-20260227
+    function gameLoop() {
+        // --- NEW: Check for Victory FIRST! ---
+        if (isVictory) {
+            walkingSfx.pause(); 
+
+            // 1. Create a cool cinematic white fade over the game
+            ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Draw the golden victory text
+            ctx.shadowColor = "black";
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 3;
+
+            ctx.textAlign = "center";
+
+            // Big Title
+            ctx.fillStyle = "gold";
+            ctx.font = "bold 60px Arial";
+            ctx.fillText("ULTIMATE VICTORY", canvas.width / 2, canvas.height / 2 - 20);
+
+            // Subtitle
+            ctx.fillStyle = "white";
+            ctx.font = "bold 30px Arial";
+            ctx.fillText("You survived the onslaught!", canvas.width / 2, canvas.height / 2 + 40);
+
+            // Reset shadows so they don't mess up anything else later
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Stop the game loop entirely!
+            return; 
+        }
     // Check for Game Over FIRST!
     // Locate this inside your gameLoop() function
     if (player.health <= 0) {

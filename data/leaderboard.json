@@ -1,1 +1,18 @@
-[]
+[
+    {
+        "name": "Cheyenne",
+        "score": 3445,
+        "totalKills": 151,
+        "bossesKilled": 7,
+        "survivedTime": 518,
+        "dateTime": 1773797105812
+    },
+    {
+        "name": "Cheyenne",
+        "score": 1195,
+        "totalKills": 57,
+        "bossesKilled": 2,
+        "survivedTime": 542,
+        "dateTime": 1775499385928
+    }
+]

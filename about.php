@@ -44,16 +44,18 @@
 
         <h2>How to Play (Rules)</h2>
         <ul>
-            <li><strong>Movement:</strong> Use <code>W A S D</code> or the <code>Arrow Keys</code> to navigate the frozen battlefield.</li>
+            <li><strong>Movement & Dodging:</strong> Use <code>W A S D</code> or the <code>Arrow Keys</code> to navigate the frozen battlefield. <code>Right-Click</code> to dash towards your mouse cursor!</li>
             <li><strong>Combat:</strong> Aim with your mouse and <code>Click</code> to throw snowballs.</li>
             <li><strong>The Enemies:</strong> 
                 <ul>
                     <li><em>Standard Snowmen (White):</em> Your average winter grunts.</li>
                     <li><em>Runners (Cyan):</em> Fast but fragile. Don't let them swarm you!</li>
                     <li><em>Tanks (Gray):</em> Slow-moving giants that take multiple hits to bring down.</li>
+                    <li><em>Spitters:</em> Ranged enemies that throw snowballs back at you. Keep moving!</li>
                 </ul>
             </li>
-            <li><strong>Boss Fights:</strong> Watch out for the giant Purple Bosses! They spawn as your score increases, carry massive health pools, and shoot highly damaging snowballs back at you.</li>
+            <li><strong>Boss Fights:</strong> Watch out for the giant Purple Bosses! They spawn as your score increases, carry massive health pools, and shoot highly damaging snowballs. <em>Pro tip: Boss snowballs can hurt other enemies—use their friendly fire to your advantage!</em></li>
+            <li><strong>Ultimate Mode:</strong> Face off against the Ultimate Boss. Dodge carefully, manage the arena, and survive to see the special victory screen!</li>
             <li><strong>Boost Mode:</strong> Defeat 30 normal enemies to trigger a 15-second rapid-fire snowball boost!</li>
         </ul>
 
@@ -71,6 +73,8 @@
             <li>Troubleshooting JavaScript logic, specifically fixing a "phasing" collision bug with the rapid-fire boost.</li>
             <li>Structuring PHP code and writing the JSON parsing logic for the dynamic, sortable leaderboard.</li>
             <li>Drafting the mathematical logic for the HTML Canvas particle system (explosions and hit effects).</li>
+            <li>Designing the distance and speed calculations for a controllable, mouse-driven dash mechanic.</li>
+            <li>Implementing complex collision checks for projectile friendly-fire and boss health scaling.</li>
             <li>Providing best practices for code organization and security.</li>
         </ul>
 
